@@ -66,6 +66,13 @@ const TABLES = [
 			{ key: "departmentsJson", type: "string", size: 4000, required: false },
 			{ key: "timezone", type: "string", size: 64, required: false },
 			{ key: "readinessSnapshotId", type: "string", size: 64, required: false },
+			{
+				key: "practiceReadinessPct",
+				type: "integer",
+				required: false,
+				min: 0,
+				max: 100,
+			},
 			{ key: "linkedAuditDocIds", type: "string", size: 4000, required: false },
 			{ key: "auditTrailJson", type: "string", size: 8000, required: false },
 			{ key: "calendarEventId", type: "string", size: 64, required: false },
@@ -133,6 +140,23 @@ const TABLES = [
 			{ key: "transcriptJson", type: "string", size: 16384, required: true },
 			{ key: "scoresJson", type: "string", size: 16384, required: true },
 			{ key: "status", type: "string", size: 32, required: true },
+			{ key: "callId", type: "string", size: 64, required: false },
+			{ key: "recordingUrl", type: "string", size: 512, required: false },
+			{ key: "consentAt", type: "string", size: 64, required: false },
+			{ key: "egressId", type: "string", size: 128, required: false },
+			{ key: "recordingFileId", type: "string", size: 64, required: false },
+			{
+				key: "transcriptRedactedJson",
+				type: "longtext",
+				required: false,
+			},
+			{
+				key: "dataResidencyRegion",
+				type: "string",
+				size: 32,
+				required: false,
+			},
+			{ key: "audioAnonymized", type: "boolean", required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
 		indexes: [
@@ -307,6 +331,11 @@ async function createColumn(databaseId, tableId, col) {
 		const body = { key: col.key, required: col.required, array: false };
 		if (!col.required) body.default = false;
 		await appwrite(`${base}/boolean`, { method: "POST", body });
+	} else if (col.type === "longtext") {
+		await appwrite(`${base}/longtext`, {
+			method: "POST",
+			body: { key: col.key, required: col.required, array: false },
+		});
 	} else if (col.type === "enum") {
 		await appwrite(`${base}/enum`, {
 			method: "POST",

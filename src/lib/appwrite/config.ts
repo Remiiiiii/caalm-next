@@ -326,6 +326,12 @@ export const appwriteConfig = {
 		"69c4b201001f4e8c2104",
 	),
 
+	/** Practice interview recordings (name: audit_lab_practice_recordings) */
+	auditLabPracticeRecordingsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_LAB_RECORDINGS_BUCKET",
+		"69c4b208001f4e8c2110",
+	),
+
 	/** Audit Lab captured rehearsal gaps (name: review_gaps) */
 	reviewGapsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_REVIEW_GAPS_COLLECTION",

@@ -7,7 +7,10 @@
 		"node": "^18.18.0 || ^19.8.0 || >=20.0.0 <25.0.0"
 	},
 	"scripts": {
-		"dev": "next dev --turbo",
+		"dev": "pnpm --parallel --filter caalm-next --filter @caalm/voice-agent run start:dev",
+		"start:dev": "next dev --turbo",
+		"dev:web": "pnpm run start:dev",
+		"dev:voice": "pnpm --filter @caalm/voice-agent run start:dev",
 		"dev:setup": "node scripts/setup-dev.js && pnpm run dev",
 		"restart": "taskkill /F /IM node.exe 2>nul || echo \"No Node processes to kill\" && pnpm run dev",
 		"build": "next build",
@@ -126,6 +129,8 @@
 		"ioredis": "^5.9.2",
 		"isomorphic-dompurify": "3.0.0-rc.2",
 		"lenis": "^1.3.25",
+		"livekit-client": "^2.24.1",
+		"livekit-server-sdk": "^2.20.0",
 		"lucide-react": "^1.68.0",
 		"mailgun.js": "^12.7.0",
 		"mammoth": "^1.11.0",

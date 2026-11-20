@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+	EXPIRY_ALERT_MODAL_PREF_EVENT,
+	isExpiryAlertModalEnabled,
+} from "@/lib/expiry/expiry-alert-pref";
+import {
 	buildExpiryQueue,
 	calculateDaysUntilExpiry,
 	EXPIRY_QUEUE_AHEAD_DAYS,
@@ -39,6 +43,7 @@ export function useCombinedExpiryModal(
 	const [licenses, setLicenses] = useState<License[]>([]);
 	const [licensesFetchSettled, setLicensesFetchSettled] = useState(false);
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [alertModalEnabled, setAlertModalEnabled] = useState(true);
 	const [testMode, setTestMode] = useState(false);
 	const [testItems, setTestItems] = useState<ExpiryQueueItem[]>([]);
 	const [wasManuallyClosed, setWasManuallyClosed] = useState(false);
@@ -52,6 +57,24 @@ export function useCombinedExpiryModal(
 	useEffect(() => {
 		setShown(loadExpiryShownState());
 	}, []);
+
+	// Keep auto-open gated to the personal preference switch (settings / dashboard).
+	useEffect(() => {
+		const syncPref = () => setAlertModalEnabled(isExpiryAlertModalEnabled());
+		syncPref();
+		window.addEventListener(EXPIRY_ALERT_MODAL_PREF_EVENT, syncPref);
+		window.addEventListener("storage", syncPref);
+		return () => {
+			window.removeEventListener(EXPIRY_ALERT_MODAL_PREF_EVENT, syncPref);
+			window.removeEventListener("storage", syncPref);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!alertModalEnabled && isModalOpen && !testMode) {
+			setIsModalOpen(false);
+		}
+	}, [alertModalEnabled, isModalOpen, testMode]);
 
 	/** Snapshot a multi-item queue into testMode so a later "shown" load cannot collapse it. */
 	const openQueueAt = useCallback((queue: ExpiryQueueItem[], index: number) => {
@@ -108,6 +131,7 @@ export function useCombinedExpiryModal(
 
 	useEffect(() => {
 		if (
+			alertModalEnabled &&
 			licensesFetchSettled &&
 			hasTriggerItems &&
 			!isModalOpen &&
@@ -119,6 +143,7 @@ export function useCombinedExpiryModal(
 			setIsModalOpen(true);
 		}
 	}, [
+		alertModalEnabled,
 		licensesFetchSettled,
 		hasTriggerItems,
 		isModalOpen,

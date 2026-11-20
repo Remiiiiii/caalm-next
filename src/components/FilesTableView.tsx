@@ -2,9 +2,13 @@
 
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -70,10 +74,8 @@ export default function FilesTableView({
 					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 						Uploaded
 					</TableHead>
-					<TableHead
-						className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
-					>
-						Actions
+					<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+						<span className="sr-only">Actions</span>
 					</TableHead>
 				</TableRow>
 			</TableHeader>
@@ -83,7 +85,6 @@ export default function FilesTableView({
 						key={file.$id}
 						className={cn(
 							DATA_TABLE_BODY_ROW_BASE,
-							"group",
 							selectedIds.includes(file.$id) &&
 								"bg-blue/10 [&>td:first-child]:relative [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-y-0 [&>td:first-child]:before:left-0 [&>td:first-child]:before:w-0.5 [&>td:first-child]:before:bg-[#0f5384]",
 						)}
@@ -106,7 +107,10 @@ export default function FilesTableView({
 									imageClassName="!size-8"
 								/>
 								<p
-									className="subtitle-2 max-w-60 truncate whitespace-nowrap text-slate-700"
+									className={cn(
+										DATA_TABLE_PRIMARY_TITLE,
+										"max-w-60 truncate whitespace-nowrap",
+									)}
 									title={file.name || "Untitled"}
 								>
 									{file.name || "Untitled"}
@@ -114,7 +118,7 @@ export default function FilesTableView({
 							</div>
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "whitespace-nowrap text-slate-700")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							<span className="capitalize">
 								{file.extension || file.type || "—"}
@@ -123,13 +127,14 @@ export default function FilesTableView({
 						<TableCell
 							className={cn(
 								rowPad,
-								"whitespace-nowrap tabular-nums text-slate-700",
+								DATA_TABLE_BODY_TEXT,
+								"whitespace-nowrap tabular-nums",
 							)}
 						>
 							{convertFileSize({ sizeInBytes: file.size || 0 })}
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "whitespace-nowrap text-slate-700")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							<FormattedDateTime date={file.$createdAt} className="body-2" />
 						</TableCell>
@@ -137,7 +142,9 @@ export default function FilesTableView({
 							className={cn(rowPad, "pr-4 text-right")}
 							onClick={(e) => e.stopPropagation()}
 						>
-							<div className="inline-flex justify-end">
+							<div
+								className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}
+							>
 								<ActionDropdown
 									file={file}
 									userRole={userRole}

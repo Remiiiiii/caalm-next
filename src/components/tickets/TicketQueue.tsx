@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { ASSIGN_SIZE } from "@/components/tasks/TaskAssigneePicker";
 import Avatar from "@/components/ui/avatar";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_CELL,
 	DATA_TABLE_CELL_FIRST,
 	DATA_TABLE_CELL_LAST,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 	SortableDataTableHead,
 } from "@/components/ui/caalm-data-table";
 import {
@@ -165,13 +168,21 @@ export function TicketQueue({
 										href={`/tickets/${ticket.$id}`}
 										aria-label={`${number}: ${ticket.title}`}
 										onClick={(event) => event.stopPropagation()}
-										className="whitespace-nowrap text-xs font-semibold tracking-wide text-[#0f5384] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+										className={cn(
+											DATA_TABLE_PRIMARY_TITLE,
+											"whitespace-nowrap text-xs tracking-wide hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										)}
 									>
 										{number}
 									</Link>
 								</TableCell>
 								<TableCell className={DATA_TABLE_CELL}>
-									<p className="max-w-md min-w-[12rem] truncate text-sm font-medium text-slate-700">
+									<p
+										className={cn(
+											DATA_TABLE_PRIMARY_TITLE,
+											"max-w-md min-w-[12rem] truncate font-semibold",
+										)}
+									>
 										{ticket.title}
 									</p>
 								</TableCell>
@@ -188,7 +199,7 @@ export function TicketQueue({
 														<Avatar
 															name={ticket.submittedByName}
 															userId={ticket.submittedByUserId}
-															size="sm"
+															size={ASSIGN_SIZE}
 															imageUrl={avatarUrls[ticket.submittedByUserId]}
 														/>
 													</div>
@@ -207,7 +218,8 @@ export function TicketQueue({
 								<TableCell
 									className={cn(
 										DATA_TABLE_CELL,
-										"whitespace-nowrap text-sm text-slate-600",
+										DATA_TABLE_BODY_TEXT,
+										"whitespace-nowrap",
 									)}
 									suppressHydrationWarning
 								>
@@ -216,7 +228,8 @@ export function TicketQueue({
 								<TableCell
 									className={cn(
 										DATA_TABLE_CELL,
-										"whitespace-nowrap text-sm tabular-nums text-slate-600",
+										DATA_TABLE_BODY_TEXT,
+										"whitespace-nowrap tabular-nums",
 									)}
 									suppressHydrationWarning
 								>

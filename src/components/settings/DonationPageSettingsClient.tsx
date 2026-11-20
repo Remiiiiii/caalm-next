@@ -35,9 +35,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DonationPageShareCard } from "@/components/settings/DonationPageShareCard";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1057,10 +1062,8 @@ export function DonationPageSettingsClient({
 											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												Published
 											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-											>
-												Actions
+											<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+												<span className="sr-only">Actions</span>
 											</TableHead>
 										</TableRow>
 									</TableHeader>
@@ -1071,10 +1074,15 @@ export function DonationPageSettingsClient({
 												className={DATA_TABLE_BODY_ROW_BASE}
 											>
 												<TableCell className="py-4 pl-4 pr-3">
-													<p className="font-medium text-slate-700">
+													<p className={DATA_TABLE_PRIMARY_TITLE}>
 														{v.changeSummary || `Version ${v.versionNumber}`}
 													</p>
-													<p className="mt-0.5 text-xs text-slate-500 tabular-nums">
+													<p
+														className={cn(
+															DATA_TABLE_PRIMARY_SUBTEXT,
+															"mt-0.5 tabular-nums",
+														)}
+													>
 														v{v.versionNumber}
 													</p>
 												</TableCell>
@@ -1089,26 +1097,42 @@ export function DonationPageSettingsClient({
 														</span>
 													)}
 												</TableCell>
-												<TableCell className="px-3 py-4 text-slate-700">
+												<TableCell
+													className={cn(DATA_TABLE_BODY_TEXT, "px-3 py-4")}
+												>
 													{v.publishedByName || "Unknown"}
 												</TableCell>
-												<TableCell className="px-3 py-4 whitespace-nowrap text-slate-600">
+												<TableCell
+													className={cn(
+														DATA_TABLE_BODY_TEXT,
+														"whitespace-nowrap px-3 py-4",
+													)}
+												>
 													{formatDistanceToNow(new Date(v.publishedAt), {
 														addSuffix: true,
 													})}
 												</TableCell>
 												<TableCell className="py-4 pl-3 pr-4 text-right">
-													{canEdit && !v.isLive ? (
-														<button
-															type="button"
-															className="cursor-pointer text-sm font-medium text-[#0f5384] hover:underline"
-															onClick={() => void handleRevert(v.versionNumber)}
-														>
-															Revert
-														</button>
-													) : (
-														<span className="text-slate-400">—</span>
-													)}
+													<div
+														className={cn(
+															"inline-flex justify-end",
+															DATA_TABLE_ACTIONS_TRIGGER,
+														)}
+													>
+														{canEdit && !v.isLive ? (
+															<button
+																type="button"
+																className="cursor-pointer text-sm font-medium text-[#0f5384] hover:underline"
+																onClick={() =>
+																	void handleRevert(v.versionNumber)
+																}
+															>
+																Revert
+															</button>
+														) : (
+															<span className="text-slate-400">—</span>
+														)}
+													</div>
 												</TableCell>
 											</TableRow>
 										))}

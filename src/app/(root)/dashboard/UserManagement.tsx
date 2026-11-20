@@ -10,13 +10,19 @@ import {
 import Image from "next/image";
 import { LoadError } from "@/components/LoadError";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { ASSIGN_SIZE } from "@/components/tasks/TaskAssigneePicker";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -768,13 +774,8 @@ const UserManagement = () => {
 									{renderSortableHead("Assigned by", "assignedByName", "px-3")}
 									{renderSortableHead("Assigned date", "assignedDate", "px-3")}
 									{renderSortableHead("Last active", "lastActiveAt", "px-3")}
-									<TableHead
-										className={cn(
-											DATA_TABLE_HEADER_CELL,
-											"pl-3 pr-4 text-right",
-										)}
-									>
-										<span className="sr-only">Action</span>
+									<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+										<span className="sr-only">Actions</span>
 									</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -809,15 +810,25 @@ const UserManagement = () => {
 													<Avatar
 														name={user.fullName}
 														userId={user.$id}
-														size="sm"
+														size={ASSIGN_SIZE}
 														className="shrink-0 gap-0"
 														imageUrl={resolveAvatarDisplayUrl(user)}
 													/>
 													<div className="min-w-0">
-														<p className="truncate text-sm font-semibold text-slate-700">
+														<p
+															className={cn(
+																DATA_TABLE_PRIMARY_TITLE,
+																"truncate",
+															)}
+														>
 															{user.fullName}
 														</p>
-														<p className="truncate text-sm text-slate-600">
+														<p
+															className={cn(
+																DATA_TABLE_PRIMARY_SUBTEXT,
+																"truncate",
+															)}
+														>
 															{user.email}
 														</p>
 													</div>
@@ -851,33 +862,50 @@ const UserManagement = () => {
 												</div>
 											</TableCell>
 											<TableCell className="px-3 py-3">
-												<span className="text-sm text-slate-600">
+												<span className={DATA_TABLE_BODY_TEXT}>
 													{user.assignedByName || "System"}
 												</span>
 											</TableCell>
 											<TableCell className="whitespace-nowrap px-3 py-3">
-												<span className="text-sm tabular-nums text-slate-600">
+												<span
+													className={cn(
+														DATA_TABLE_BODY_TEXT,
+														"tabular-nums",
+													)}
+												>
 													{formatUserDateTimeLabel(
 														user.assignedDate || user.$createdAt,
 													)}
 												</span>
 											</TableCell>
 											<TableCell className="whitespace-nowrap px-3 py-3">
-												<span className="text-sm tabular-nums text-slate-600">
+												<span
+													className={cn(
+														DATA_TABLE_BODY_TEXT,
+														"tabular-nums",
+													)}
+												>
 													{formatUserDateTimeLabel(
 														user.lastActiveAt || user.$updatedAt,
 													)}
 												</span>
 											</TableCell>
 											<TableCell className="py-3 pr-4 pl-3 text-right">
-												<UserManagementRowActions
-													user={user}
-													actor={actor}
-													canManageUsers={canManageUsers}
-													canAssignRoles={canAssignRoles}
-													canImpersonate={canImpersonate}
-													onAction={openAction}
-												/>
+												<div
+													className={cn(
+														"inline-flex justify-end",
+														DATA_TABLE_ACTIONS_TRIGGER,
+													)}
+												>
+													<UserManagementRowActions
+														user={user}
+														actor={actor}
+														canManageUsers={canManageUsers}
+														canAssignRoles={canAssignRoles}
+														canImpersonate={canImpersonate}
+														onAction={openAction}
+													/>
+												</div>
 											</TableCell>
 										</TableRow>
 									);

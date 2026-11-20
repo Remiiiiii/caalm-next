@@ -610,32 +610,41 @@ Header layout (Select Contract Type / License Drafts / `AppDialog` `onBack` is t
 
 **ALWAYS** use the Contracts table trigger (`ActionDropdown`). Do **not** use Lucide `MoreVertical` / `EllipsisVertical` for row or card overflow menus.
 
+In **data tables**, the Actions column header has **no visible "Actions" text** (`DATA_TABLE_ACTIONS_HEAD` + `<span className="sr-only">Actions</span>`). The dots trigger uses `DATA_TABLE_ACTIONS_TRIGGER` so it appears on row hover / focus-within only (body rows already include `group`).
+
 ```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger
-    className="shad-no-focus rounded-full transition-colors hover:bg-white/30"
-    aria-label={`Actions for ${itemName}`}
-  >
-    <Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
-  </DropdownMenuTrigger>
-  <AppDropdownMenuContent align="end">
-    <AppDropdownMenuItem icon={Pencil} onClick={...}>
-      Edit
-    </AppDropdownMenuItem>
-    <DropdownMenuSeparator />
-    <AppDropdownMenuItem icon={Trash2} tone="danger" onClick={...}>
-      Delete
-    </AppDropdownMenuItem>
-  </AppDropdownMenuContent>
-</DropdownMenu>
+<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+  <span className="sr-only">Actions</span>
+</TableHead>
+{/* cell */}
+<div className={cn("flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}>
+  <DropdownMenu>
+    <DropdownMenuTrigger
+      className="shad-no-focus inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-transparent"
+      aria-label={`Actions for ${itemName}`}
+    >
+      <Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
+    </DropdownMenuTrigger>
+    <AppDropdownMenuContent align="end">
+      <AppDropdownMenuItem icon={Pencil} onClick={...}>
+        Edit
+      </AppDropdownMenuItem>
+      <DropdownMenuSeparator />
+      <AppDropdownMenuItem icon={Trash2} tone="danger" onClick={...}>
+        Delete
+      </AppDropdownMenuItem>
+    </AppDropdownMenuContent>
+  </DropdownMenu>
+</div>
 ```
 
 **Required:**
 - Icon: `/assets/icons/dots.svg` at `width={34}` `height={34}`
-- Trigger: `shad-no-focus rounded-full transition-colors hover:bg-white/30`
+- Trigger: `shad-no-focus rounded-full bg-transparent` (no hover fill on the 3-dot button)
 - Items: `AppDropdownMenuItem` with a Lucide `icon` (and `tone="danger"` for delete/archive)
 - Panel: glass dropdown **without** card-cap
 - `aria-label` on the trigger that names the row (`Actions for {title}`)
+- Table Actions header: blank visible label; hover-reveal dots
 
 **Delete / Archive divider (required):** If the menu includes Delete, Archive, or any other destructive item, put `<DropdownMenuSeparator />` immediately **above** that item. Never sit a destructive action flush against Edit / History / other safe actions.
 
@@ -708,15 +717,21 @@ Composer send and other sheet chrome outside the bubble may still use `btn-prima
 
 | Piece | Use |
 |---|---|
-| Shell | `CaalmDataTable` (wraps `border-separate border-spacing-0` + `overflow-x-auto pb-4`; applies `DATA_TABLE_INSET` (`px-2 sm:px-4`) itself, so call sites cannot remove the inset) |
+| Shell | `CaalmDataTable` (wraps `border-separate border-spacing-0` + `overflow-x-hidden pb-4`; applies `DATA_TABLE_INSET` (`px-2 sm:px-4`) itself, so call sites cannot remove the inset). No horizontal scrollbar. |
 | Toolbar above the table (search, filters) | `DATA_TABLE_TOOLBAR_INSET` (`px-4`) so the search field lines up with the table data |
 | Header row | `DATA_TABLE_HEADER_ROW` (light grey band) |
 | Header cell | `DATA_TABLE_HEADER_CELL` (`text-slate-700`, semibold; + `px-3`; first/last cells use `pl-4` / `pr-4`) |
 | Sortable header | `SortableDataTableHead` (`ChevronsUpDown`) — only on columns that sort |
-| Body row | `DATA_TABLE_BODY_ROW_CLICKABLE` (or `DATA_TABLE_BODY_ROW_BASE`) |
+| Body row | `DATA_TABLE_BODY_ROW_CLICKABLE` (or `DATA_TABLE_BODY_ROW_BASE`; both include `group` for hover actions) |
 | Cell padding | `DATA_TABLE_CELL` / `DATA_TABLE_CELL_FIRST` / `DATA_TABLE_CELL_LAST` |
+| Primary title (first content col) | `DATA_TABLE_PRIMARY_TITLE` — Fix next Item (`font-semibold text-[#0f5384]`) |
+| Primary subtext | `DATA_TABLE_PRIMARY_SUBTEXT` — Fix next caption (`caption text-slate-500`) |
+| Other body text | `DATA_TABLE_BODY_TEXT` — `text-sm text-slate-600` |
+| Actions header | `DATA_TABLE_ACTIONS_HEAD` — **no visible "Actions" label**; `sr-only` only; `w-14` so the 34px dots icon is not crushed |
+| Actions trigger | `DATA_TABLE_ACTIONS_TRIGGER` — opacity 0 until row `group-hover` / focus-within |
 | Empty state | `CaalmDataTableEmpty` |
 | Loading | `CaalmDataTableSkeleton` (not a spinner) |
+**Typography / Actions source of truth:** Audit Readiness **Fix next** (`ReadinessFixNextTable`).  
 **Also used by:** contracts, licenses, approvals, files, users, roles, audits, settings billing tables.
 
 ### Bulk selection, bars and motion
@@ -736,7 +751,7 @@ When a cell component is shared (status badge, avatar, linked chip), the detail 
 
 1. Prefer the user’s **uploaded profile photo** (`imageUrl` / `getProfilePictureUrl` / `resolveAvatarDisplayUrl`).
 2. If no photo (or load fails), render **initials** on the shared `Avatar` color (`getAvatarColor`).
-3. When a photo is shown, include the **contracts-style outer ring** (teal→navy gradient pad + white inner border) — same as `ManagerAvatars` / `@/components/ui/avatar`.
+3. When a photo is shown, include the **ProfilePicture ring** (`AVATAR_PHOTO_RING_GRADIENT` + `AVATAR_PHOTO_RING_PAD` `3px` + `AVATAR_PHOTO_INNER_BORDER`) — same as `ProfilePicture` / `ManagerAvatars` / `@/components/ui/avatar`.
 4. Use `@/components/ui/avatar` — do not invent a one-off initials circle that ignores photos.
 5. **Never render a bare full-name string as the person.** Wherever a user’s full name would appear on its own (table "Submitted by" / assignee / owner cells, filters, pickers), first look up the uploaded photo, then render the `Avatar` (photo, else initials) **instead of** the name, with a tooltip showing the full name. Keep secondary lines (department, role) beneath the avatar. If the data source has no photo field, fetch it server-side by user id (see `getSubmitterAvatarUrls` in `src/lib/tickets/submitter-avatars.ts`) rather than skipping the lookup. Exception: `showName` on `Avatar` or a name that sits beside the avatar in a profile header, comment or sheet where the name is the primary content.
 
@@ -888,7 +903,7 @@ When creating a new page or component, verify:
 - [ ] Text inputs, selects, textareas, and search fields use `border-[0.25px] border-slate-300` (never 1px `border`, white, transparent, or `slate-200` on light fills)
 - [ ] Dropdown panels use glass (`DropdownMenuContent` / `AppDropdownMenuContent` / `SelectContent`) with **no card-cap** and **no bg/blur overrides**
 - [ ] Scrollable dropdown / submenu lists use `DropdownScrollArea` (not native `overflow-y-auto` scrollbars)
-- [ ] Cards / glass panels / tables waiting on data use skeletons (`CaalmDataTableSkeleton` / `StatCardSkeleton` / `Skeleton`) — never branded `LoadingSpinner` or spin icons- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`
+- [ ] Cards / glass panels / tables waiting on data use skeletons (`CaalmDataTableSkeleton` / `StatCardSkeleton` / `Skeleton`) — never branded `LoadingSpinner` or spin icons- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full bg-transparent` (no hover fill) — not Lucide `MoreVertical`
 - [ ] Delete / Archive menu items have `<DropdownMenuSeparator />` immediately above them and `tone="danger"`
 - [ ] Badges use `inline-block` / `inline-flex` + `px-2 py-0.5 text-xs rounded-full border` plus CAALM status colors — no dots inside; no truncated labels
 - [ ] Toolbar / filter-row selects use `CaalmFilterSelect` (Assign Tasks pill standard)

@@ -1,7 +1,12 @@
 "use client";
 
 import type React from "react";
-import { getAvatarColor } from "@/components/ui/avatar";
+import {
+	AVATAR_PHOTO_INNER_BORDER,
+	AVATAR_PHOTO_RING_GRADIENT,
+	AVATAR_PHOTO_RING_PAD,
+	getAvatarColor,
+} from "@/components/ui/avatar";
 import {
 	Tooltip,
 	TooltipContent,
@@ -108,19 +113,23 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 								>
 									{shouldShowImage ? (
 										<div
-											className="rounded-full overflow-hidden"
+											className="relative shrink-0 overflow-hidden rounded-full"
 											style={{
-												background:
-													"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-												padding: "2px",
-												width: "24px",
-												height: "24px",
+												background: AVATAR_PHOTO_RING_GRADIENT,
+												padding: AVATAR_PHOTO_RING_PAD,
+												/* md = 32px — Fix next / ASSIGN_SIZE */
+												width: "32px",
+												height: "32px",
 											}}
 										>
 											<img
 												src={profileImageUrl!}
 												alt={manager.fullName}
-												className="w-full h-full object-cover rounded-full border border-[#FCFEFF]"
+												className={cn(
+													"h-full w-full rounded-full object-cover",
+													AVATAR_PHOTO_INNER_BORDER,
+												)}
+												referrerPolicy="no-referrer"
 												onError={() => {
 													onImageError(manager.$id, manager.accountId);
 												}}
@@ -128,7 +137,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 										</div>
 									) : (
 										<div
-											className="rounded-full w-6 h-6 flex items-center justify-center text-white text-xs border-2 border-white shadow-sm"
+											className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-xs text-white shadow-sm"
 											style={{ backgroundColor: avatarColor }}
 										>
 											{initials}
@@ -149,7 +158,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 						<TooltipTrigger asChild>
 							<button
 								type="button"
-								className="rounded-full w-6 h-6 flex items-center justify-center text-white text-xs bg-purple-400 border-2 border-white -ml-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-sm"
+								className="-ml-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-purple-400 text-xs text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
 								aria-label={`${remainingCount} additional assigned managers`}
 								tabIndex={0}
 								onKeyDown={(e) => {

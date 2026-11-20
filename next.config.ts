@@ -97,6 +97,16 @@ const nextConfig: NextConfig = {
 				destination: "/dashboard/content-creator",
 				permanent: true,
 			},
+			{
+				source: "/audit-lab/sessions",
+				destination: "/audit-lab/simulations",
+				permanent: true,
+			},
+			{
+				source: "/audit-lab/sessions/:sessionId",
+				destination: "/audit-lab/simulations/:sessionId",
+				permanent: true,
+			},
 		];
 	},
 	// Improve development caching for faster reloads

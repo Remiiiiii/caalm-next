@@ -54,8 +54,8 @@ import {
 	profilesFromUsers,
 	SimulationDetailSheet,
 } from "@/components/audit-lab/SimulationDetailSheet";
-import { SimulationPhaseStepper } from "@/components/audit-lab/SimulationPhaseStepper";
 import { TrendChart } from "@/components/audit-lab/TrendChart";
+import { VoiceInterviewPanel } from "@/components/audit-lab/VoiceInterviewPanel";
 import { LoadError } from "@/components/LoadError";
 import {
 	fadeLeft,
@@ -71,6 +71,7 @@ import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
+	CaalmDataTableSkeleton,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
@@ -118,12 +119,6 @@ import type {
 	OverviewActivity,
 	OverviewSuggestion,
 } from "@/lib/audit-lab/overview";
-import type { ScriptSection } from "@/lib/audit-lab/script-sections";
-import {
-	phaseIndex,
-	resolveSimulationPhase,
-	SIMULATION_PHASES,
-} from "@/lib/audit-lab/simulation-phase";
 import {
 	type EvidenceRequest,
 	parseParticipants,
@@ -218,9 +213,7 @@ function sessionStatusLabel(status: string): string {
 		.join(" ");
 }
 
-// shortcut: ReviewSession has no readiness score field yet, so the bar length
-// is a static per-status placeholder, not a computed score. Upgrade once
-// readinessSnapshotId resolves to a real percentage.
+// Fallback when practiceReadinessPct is unset: static per-status placeholder.
 const SESSION_READINESS_BY_STATUS: Record<
 	string,
 	{ pct: number; colorClass: string; faded?: boolean }
@@ -235,6 +228,28 @@ const SESSION_READINESS_BY_STATUS: Record<
 	cancelled: { pct: 0, colorClass: "bg-slate-300" },
 };
 
+function sessionReadinessDisplay(session: ReviewSession): {
+	pct: number;
+	colorClass: string;
+	faded?: boolean;
+	fromPractice: boolean;
+} {
+	const fromPractice =
+		typeof session.practiceReadinessPct === "number" &&
+		Number.isFinite(session.practiceReadinessPct);
+	if (fromPractice) {
+		const pct = Math.max(0, Math.min(100, Math.round(session.practiceReadinessPct)));
+		const colorClass =
+			pct >= 80 ? "bg-green" : pct >= 50 ? "bg-[#078fab]" : "bg-orange";
+		return { pct, colorClass, fromPractice: true };
+	}
+	const fallback = SESSION_READINESS_BY_STATUS[session.status] ?? {
+		pct: 0,
+		colorClass: "bg-slate-300",
+	};
+	return { ...fallback, fromPractice: false };
+}
+
 type SessionSortKey = "scheduled" | "title" | "readiness";
 type SessionSort = { key: SessionSortKey; direction: "asc" | "desc" };
 
@@ -248,8 +263,8 @@ function compareSessions(
 		case "title":
 			return a.title.localeCompare(b.title) * dir;
 		case "readiness": {
-			const ra = SESSION_READINESS_BY_STATUS[a.status]?.pct ?? 0;
-			const rb = SESSION_READINESS_BY_STATUS[b.status]?.pct ?? 0;
+			const ra = sessionReadinessDisplay(a).pct;
+			const rb = sessionReadinessDisplay(b).pct;
 			return (ra - rb) * dir;
 		}
 		case "scheduled": {
@@ -498,7 +513,23 @@ function AuditLabOverviewSkeleton() {
 	);
 }
 
-/** Generic loading placeholder for every non-overview surface (sessions, interview, evidence, reports). */
+/** Loading placeholder for Simulations, shaped like search + filter + table. */
+function AuditLabSessionsSkeleton() {
+	return (
+		<Card className="glass-card" aria-hidden>
+			<div className="glass-card-cap" />
+			<CardContent className="space-y-3 p-4 sm:p-6">
+				<div className="flex flex-wrap items-center justify-between gap-3 pb-1">
+					<Skeleton className="h-9 w-full max-w-xl rounded-lg" />
+					<Skeleton className="h-[1.55rem] w-28 rounded-full" />
+				</div>
+				<CaalmDataTableSkeleton columns={9} rows={6} className="pt-0" />
+			</CardContent>
+		</Card>
+	);
+}
+
+/** Generic loading placeholder for other non-overview surfaces. */
 function AuditLabSurfaceSkeleton() {
 	return (
 		<div className="space-y-4">
@@ -542,6 +573,7 @@ export function AuditLabClient({
 	const canManageEvidence = capabilities.canManageEvidence;
 	const canPractice = capabilities.canRunPractice;
 	const canScore = capabilities.canScorePractice;
+	const canViewPracticePii = capabilities.canViewPracticePii;
 
 	const { toast } = useToast();
 	const searchParams = useSearchParams();
@@ -554,7 +586,10 @@ export function AuditLabClient({
 	const [rescheduleOpen, setRescheduleOpen] = useState(false);
 	const [completeOpen, setCompleteOpen] = useState(false);
 	const [newOpen, setNewOpen] = useState(false);
+	const [detailOpen, setDetailOpen] = useState(false);
+	const [detailSessionId, setDetailSessionId] = useState<string | null>(null);
 	const [busyAction, setBusyAction] = useState<string | null>(null);
+	const [practiceMode, setPracticeMode] = useState<"voice" | "text">("voice");
 	const [evidenceGroup, setEvidenceGroup] = useState<
 		"department" | "owner" | "assignee"
 	>("department");
@@ -608,7 +643,7 @@ export function AuditLabClient({
 	// Sessions surface has no separate "upcoming" list — its avatars come
 	// straight from the full session list instead.
 	const avatarSourceSessions =
-		surface === "sessions" ? sessions : upcomingItems;
+		surface === "simulations" ? sessions : upcomingItems;
 
 	const upcomingParticipantIds = useMemo(() => {
 		const ids = new Set<string>();
@@ -623,7 +658,7 @@ export function AuditLabClient({
 	}, [avatarSourceSessions]);
 
 	const { data: participantProfiles } = useSWR(
-		(surface === "overview" || surface === "sessions") &&
+		(surface === "overview" || surface === "simulations") &&
 			upcomingParticipantIds.length > 0
 			? ["audit-lab-upcoming-avatars", upcomingParticipantIds.join(",")]
 			: null,
@@ -1183,7 +1218,7 @@ export function AuditLabClient({
 	};
 
 	const primaryAction =
-		surface === "sessions" && canManageSessions ? (
+		surface === "simulations" && canManageSessions ? (
 			<Button
 				type="button"
 				className="btn-primary px-3 sm:px-4"
@@ -1212,6 +1247,8 @@ export function AuditLabClient({
 			) : isLoading ? (
 				surface === "overview" ? (
 					<AuditLabOverviewSkeleton />
+				) : surface === "simulations" ? (
+					<AuditLabSessionsSkeleton />
 				) : (
 					<AuditLabSurfaceSkeleton />
 				)
@@ -1673,7 +1710,7 @@ export function AuditLabClient({
 														Upcoming simulations
 													</p>
 													<Link
-														href="/audit-lab/sessions"
+														href="/audit-lab/simulations"
 														className="text-xs font-semibold text-[#0f5384] hover:underline"
 													>
 														View all
@@ -1871,345 +1908,358 @@ export function AuditLabClient({
 						</div>
 					) : null}
 
-					{surface === "sessions" ? (
-						<>
-							<Card className="glass-card">
-								<div className="glass-card-cap" />
-								<CardContent className="p-4 sm:p-6">
-									<div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-										<SearchField
-											value={sessionQuery}
-											onChange={(e) => setSessionQuery(e.target.value)}
-											placeholder="Search simulations…"
-											aria-label="Search simulations"
-											containerClassName="w-full min-w-0 max-w-xl"
-										/>
-										<SessionFilterMenu
-											value={sessionStatusFilter}
-											onChange={setSessionStatusFilter}
-										/>
-									</div>
-									{filteredSessions.length === 0 ? (
-										<CaalmDataTableEmpty
-											title="No simulations found"
-											description={
-												sessions.length === 0
-													? "Schedule your first review."
-													: "Try a different status or search term."
-											}
-										/>
-									) : (
-										<CaalmDataTable className="pt-2">
-											<TableHeader className="[&_tr]:border-b-0">
-												<TableRow className={DATA_TABLE_HEADER_ROW}>
-													<TableHead
-														className={cn(
-															DATA_TABLE_HEADER_CELL,
-															"w-10 pl-4 pr-2",
-														)}
-													>
-														<Checkbox
-															checked={
-																allPagedSelected
-																	? true
-																	: somePagedSelected
-																		? "indeterminate"
-																		: false
-															}
-															onCheckedChange={(checked) =>
-																toggleAllPagedSessions(checked === true)
-															}
-															aria-label="Select all simulations on this page"
-															className="cursor-pointer"
-														/>
-													</TableHead>
-													<SortableDataTableHead
-														label="Simulation"
-														active={sessionSort.key === "title"}
-														onClick={() => toggleSessionSort("title")}
-													/>
-													<TableHead
-														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
-													>
-														Framework
-													</TableHead>
-													<TableHead
-														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
-													>
-														Participants
-													</TableHead>
-													<SortableDataTableHead
-														label="Scheduled"
-														active={sessionSort.key === "scheduled"}
-														onClick={() => toggleSessionSort("scheduled")}
-													/>
-													<TableHead
-														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
-													>
-														Prep deadline
-													</TableHead>
-													<SortableDataTableHead
-														label="Readiness"
-														active={sessionSort.key === "readiness"}
-														onClick={() => toggleSessionSort("readiness")}
-													/>
-													<TableHead
-														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
-													>
-														Status
-													</TableHead>
-													<TableHead
-														className={cn(DATA_TABLE_HEADER_CELL, "w-16 pr-4")}
-													/>
-												</TableRow>
-											</TableHeader>
-											<TableBody className="[&_tr:last-child>td]:border-b-0">
-												{pagedSessions.map((session) => {
-													const participants = parseParticipants(
-														session.participantsJson,
-													);
-													const readiness = SESSION_READINESS_BY_STATUS[
-														session.status
-													] ?? { pct: 0, colorClass: "bg-slate-300" };
-													const isSelected = selectedSessionIds.has(
-														session.$id,
-													);
-													return (
-														<TableRow
-															key={session.$id}
+					{surface === "simulations" ? (
+						<motion.div
+							variants={staggerFast}
+							initial="hidden"
+							animate="visible"
+						>
+							<motion.div variants={fadeUp}>
+								<Card className="glass-card">
+									<div className="glass-card-cap" />
+									<CardContent className="p-4 sm:p-6">
+										<div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+											<SearchField
+												value={sessionQuery}
+												onChange={(e) => setSessionQuery(e.target.value)}
+												placeholder="Search simulations…"
+												aria-label="Search simulations"
+												containerClassName="w-full min-w-0 max-w-xl"
+											/>
+											<SessionFilterMenu
+												value={sessionStatusFilter}
+												onChange={setSessionStatusFilter}
+											/>
+										</div>
+										{filteredSessions.length === 0 ? (
+											<CaalmDataTableEmpty
+												title="No simulations found"
+												description={
+													sessions.length === 0
+														? "Schedule your first review."
+														: "Try a different status or search term."
+												}
+											/>
+										) : (
+											<CaalmDataTable className="pt-2">
+												<TableHeader className="[&_tr]:border-b-0">
+													<TableRow className={DATA_TABLE_HEADER_ROW}>
+														<TableHead
 															className={cn(
-																DATA_TABLE_BODY_ROW_CLICKABLE,
-																"group bg-transparent",
-																isSelected && "bg-blue/10 hover:bg-blue/10",
+																DATA_TABLE_HEADER_CELL,
+																"w-10 pl-4 pr-2",
 															)}
-															onClick={() => openSimulationDetail(session.$id)}
 														>
-															<TableCell
-																className="px-4 py-3 pl-4 pr-2 align-middle"
-																onClick={(e) => e.stopPropagation()}
+															<Checkbox
+																checked={
+																	allPagedSelected
+																		? true
+																		: somePagedSelected
+																			? "indeterminate"
+																			: false
+																}
+																onCheckedChange={(checked) =>
+																	toggleAllPagedSessions(checked === true)
+																}
+																aria-label="Select all simulations on this page"
+																className="cursor-pointer"
+															/>
+														</TableHead>
+														<SortableDataTableHead
+															label="Simulation"
+															active={sessionSort.key === "title"}
+															onClick={() => toggleSessionSort("title")}
+														/>
+														<TableHead
+															className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+														>
+															Framework
+														</TableHead>
+														<TableHead
+															className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+														>
+															Participants
+														</TableHead>
+														<SortableDataTableHead
+															label="Scheduled"
+															active={sessionSort.key === "scheduled"}
+															onClick={() => toggleSessionSort("scheduled")}
+														/>
+														<TableHead
+															className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+														>
+															Prep deadline
+														</TableHead>
+														<SortableDataTableHead
+															label="Readiness"
+															active={sessionSort.key === "readiness"}
+															onClick={() => toggleSessionSort("readiness")}
+														/>
+														<TableHead
+															className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+														>
+															Status
+														</TableHead>
+														<TableHead
+															className={cn(
+																DATA_TABLE_HEADER_CELL,
+																"w-16 pr-4",
+															)}
+														/>
+													</TableRow>
+												</TableHeader>
+												<TableBody className="[&_tr:last-child>td]:border-b-0">
+													{pagedSessions.map((session) => {
+														const participants = parseParticipants(
+															session.participantsJson,
+														);
+														const readiness = sessionReadinessDisplay(session);
+														const isSelected = selectedSessionIds.has(
+															session.$id,
+														);
+														return (
+															<TableRow
+																key={session.$id}
+																className={cn(
+																	DATA_TABLE_BODY_ROW_CLICKABLE,
+																	"group bg-transparent",
+																	isSelected && "bg-blue/10 hover:bg-blue/10",
+																)}
+																onClick={() =>
+																	openSimulationDetail(session.$id)
+																}
 															>
-																<Checkbox
-																	checked={isSelected}
-																	onCheckedChange={(checked) =>
-																		toggleSessionSelect(
-																			session.$id,
-																			checked === true,
-																		)
-																	}
-																	aria-label={`Select ${session.title}`}
-																	className="cursor-pointer"
-																/>
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle">
-																<span className="font-medium text-sm text-slate-800">
-																	{session.title}
-																</span>
-																<p className="text-xs text-slate-500">
-																	{session.department}
-																</p>
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle">
-																{session.framework ? (
-																	<span className="inline-flex items-center rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-[#0f5384]">
-																		{session.framework}
-																	</span>
-																) : (
-																	<span className="text-sm text-slate-400">
-																		—
-																	</span>
-																)}
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle">
-																{participants.length > 0 ? (
-																	<TooltipProvider delayDuration={200}>
-																		<div className="flex items-center">
-																			{participants
-																				.slice(0, 3)
-																				.map((p, index) => {
-																					const profile =
-																						upcomingAvatarByUserId.get(
-																							p.userId,
-																						);
-																					const fullName =
-																						profile?.name ||
-																						p.name?.trim() ||
-																						"Participant";
-																					return (
-																						<Tooltip
-																							key={`${p.userId}-${index}`}
-																						>
-																							<TooltipTrigger asChild>
-																								<span className="-ml-2 inline-flex rounded-full border-2 border-white first:ml-0">
-																									<Avatar
-																										userId={p.userId}
-																										name={fullName}
-																										size="xs"
-																										imageUrl={profile?.imageUrl}
-																									/>
-																								</span>
-																							</TooltipTrigger>
-																							<TooltipContent>
-																								<p>{fullName}</p>
-																							</TooltipContent>
-																						</Tooltip>
-																					);
-																				})}
-																			{participants.length > 3 ? (
-																				<Tooltip>
-																					<TooltipTrigger asChild>
-																						<span className="-ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[11px] font-medium text-slate-600">
-																							+{participants.length - 3}
-																						</span>
-																					</TooltipTrigger>
-																					<TooltipContent>
-																						<div className="space-y-1">
-																							{participants
-																								.slice(3)
-																								.map((p, index) => {
-																									const profile =
-																										upcomingAvatarByUserId.get(
-																											p.userId,
-																										);
-																									return (
-																										<p
-																											key={`${p.userId}-${index}`}
-																										>
-																											{profile?.name ||
-																												p.name?.trim() ||
-																												"Participant"}
-																										</p>
-																									);
-																								})}
-																						</div>
-																					</TooltipContent>
-																				</Tooltip>
-																			) : null}
-																		</div>
-																	</TooltipProvider>
-																) : (
-																	<span className="text-sm text-slate-400">
-																		—
-																	</span>
-																)}
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
-																{formatSessionDateTime(session.scheduledAt)}
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
-																{formatSessionDateTime(session.prepDeadlineAt)}
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle">
-																<div
-																	className={cn(
-																		"h-1.5 w-24 overflow-hidden rounded-full bg-slate-200",
-																		readiness.faded && "opacity-50",
-																	)}
+																<TableCell
+																	className="px-4 py-3 pl-4 pr-2 align-middle"
+																	onClick={(e) => e.stopPropagation()}
 																>
+																	<Checkbox
+																		checked={isSelected}
+																		onCheckedChange={(checked) =>
+																			toggleSessionSelect(
+																				session.$id,
+																				checked === true,
+																			)
+																		}
+																		aria-label={`Select ${session.title}`}
+																		className="cursor-pointer"
+																	/>
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle">
+																	<span className="font-medium text-sm text-slate-800">
+																		{session.title}
+																	</span>
+																	<p className="text-xs text-slate-500">
+																		{session.department}
+																	</p>
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle">
+																	{session.framework ? (
+																		<span className="inline-flex items-center rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-[#0f5384]">
+																			{session.framework}
+																		</span>
+																	) : (
+																		<span className="text-sm text-slate-400">
+																			—
+																		</span>
+																	)}
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle">
+																	{participants.length > 0 ? (
+																		<TooltipProvider delayDuration={200}>
+																			<div className="flex items-center">
+																				{participants
+																					.slice(0, 3)
+																					.map((p, index) => {
+																						const profile =
+																							upcomingAvatarByUserId.get(
+																								p.userId,
+																							);
+																						const fullName =
+																							profile?.name ||
+																							p.name?.trim() ||
+																							"Participant";
+																						return (
+																							<Tooltip
+																								key={`${p.userId}-${index}`}
+																							>
+																								<TooltipTrigger asChild>
+																									<span className="-ml-2 inline-flex rounded-full border-2 border-white first:ml-0">
+																										<Avatar
+																											userId={p.userId}
+																											name={fullName}
+																											size="xs"
+																											imageUrl={
+																												profile?.imageUrl
+																											}
+																										/>
+																									</span>
+																								</TooltipTrigger>
+																								<TooltipContent>
+																									<p>{fullName}</p>
+																								</TooltipContent>
+																							</Tooltip>
+																						);
+																					})}
+																				{participants.length > 3 ? (
+																					<Tooltip>
+																						<TooltipTrigger asChild>
+																							<span className="-ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[11px] font-medium text-slate-600">
+																								+{participants.length - 3}
+																							</span>
+																						</TooltipTrigger>
+																						<TooltipContent>
+																							<div className="space-y-1">
+																								{participants
+																									.slice(3)
+																									.map((p, index) => {
+																										const profile =
+																											upcomingAvatarByUserId.get(
+																												p.userId,
+																											);
+																										return (
+																											<p
+																												key={`${p.userId}-${index}`}
+																											>
+																												{profile?.name ||
+																													p.name?.trim() ||
+																													"Participant"}
+																											</p>
+																										);
+																									})}
+																							</div>
+																						</TooltipContent>
+																					</Tooltip>
+																				) : null}
+																			</div>
+																		</TooltipProvider>
+																	) : (
+																		<span className="text-sm text-slate-400">
+																			—
+																		</span>
+																	)}
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
+																	{formatSessionDateTime(session.scheduledAt)}
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
+																	{formatSessionDateTime(
+																		session.prepDeadlineAt,
+																	)}
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle">
 																	<div
 																		className={cn(
-																			"h-full rounded-full",
-																			readiness.colorClass,
+																			"h-1.5 w-24 overflow-hidden rounded-full bg-slate-200",
+																			readiness.faded && "opacity-50",
 																		)}
-																		style={{ width: `${readiness.pct}%` }}
-																	/>
-																</div>
-															</TableCell>
-															<TableCell className="px-5 py-3 align-middle">
-																<span
-																	className={cn(
-																		"w-fit shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-																		SESSION_STATUS_BADGE[session.status] ??
-																			"bg-slate-100 text-slate-600 border-slate-200",
-																	)}
-																>
-																	{sessionStatusLabel(session.status)}
-																</span>
-															</TableCell>
-															<TableCell className="px-5 py-3 pr-4 align-middle text-right">
-																{canManageSessions ? (
-																	<DropdownMenu>
-																		<DropdownMenuTrigger
-																			className="shad-no-focus inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full opacity-0 transition-all duration-200 hover:bg-white/30 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
-																			aria-label={`Actions for ${session.title}`}
-																			onClick={(e) => e.stopPropagation()}
-																		>
-																			<Image
-																				src="/assets/icons/dots.svg"
-																				alt="dots"
-																				width={34}
-																				height={34}
-																				className="h-[34px] w-[34px] max-h-[34px] max-w-[34px] shrink-0"
-																				unoptimized
-																			/>
-																		</DropdownMenuTrigger>
-																		<AppDropdownMenuContent
-																			align="end"
-																			onClick={(e) => e.stopPropagation()}
-																		>
-																			{!SESSION_TERMINAL_STATUSES.includes(
-																				session.status,
-																			) ? (
-																				<AppDropdownMenuItem
-																					icon={CalendarClock}
-																					onSelect={() => {
-																						setSelectedId(session.$id);
-																						setRescheduleOpen(true);
-																					}}
-																				>
-																					Reschedule
-																				</AppDropdownMenuItem>
-																			) : null}
-																			{!SESSION_TERMINAL_STATUSES.includes(
-																				session.status,
-																			) ? (
-																				<AppDropdownMenuItem
-																					icon={CheckCircle}
-																					onSelect={() => {
-																						setSelectedId(session.$id);
-																						setCompleteOpen(true);
-																					}}
-																				>
-																					Mark complete
-																				</AppDropdownMenuItem>
-																			) : null}
-																			{!SESSION_TERMINAL_STATUSES.includes(
-																				session.status,
-																			) ? (
-																				<AppDropdownMenuItem
-																					icon={Ban}
-																					tone="danger"
-																					onSelect={() => {
-																						setSelectedId(session.$id);
-																						setCancelOpen(true);
-																					}}
-																				>
-																					Cancel
-																				</AppDropdownMenuItem>
-																			) : null}
-																		</AppDropdownMenuContent>
-																	</DropdownMenu>
-																) : null}
-															</TableCell>
-														</TableRow>
-													);
-												})}
-											</TableBody>
-										</CaalmDataTable>
-									)}
-								</CardContent>
-								{sessionsTotalPages > 1 ? (
-									<div className="shrink-0 rounded-b-lg border-t border-slate-200/80 bg-slate-50/60 px-4 sm:px-6">
-										<PageIndex
-											page={sessionsPageSafe}
-											totalItems={filteredSessions.length}
-											pageSize={SESSIONS_PAGE_SIZE}
-											onPageChange={setSessionsPage}
-											hideWhenSinglePage
-											className="mx-0 my-3 justify-between px-0"
-										/>
-									</div>
-								) : null}
-							</Card>
+																	>
+																		<div
+																			className={cn(
+																				"h-full rounded-full",
+																				readiness.colorClass,
+																			)}
+																			style={{ width: `${readiness.pct}%` }}
+																		/>
+																	</div>
+																</TableCell>
+																<TableCell className="px-5 py-3 align-middle">
+																	<span
+																		className={cn(
+																			"w-fit shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+																			SESSION_STATUS_BADGE[session.status] ??
+																				"bg-slate-100 text-slate-600 border-slate-200",
+																		)}
+																	>
+																		{sessionStatusLabel(session.status)}
+																	</span>
+																</TableCell>
+																<TableCell className="px-5 py-3 pr-4 align-middle text-right">
+																	{canManageSessions ? (
+																		<DropdownMenu>
+																			<DropdownMenuTrigger
+																				className="shad-no-focus inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full opacity-0 transition-all duration-200 hover:bg-white/30 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+																				aria-label={`Actions for ${session.title}`}
+																				onClick={(e) => e.stopPropagation()}
+																			>
+																				<Image
+																					src="/assets/icons/dots.svg"
+																					alt="dots"
+																					width={34}
+																					height={34}
+																					className="h-[34px] w-[34px] max-h-[34px] max-w-[34px] shrink-0"
+																					unoptimized
+																				/>
+																			</DropdownMenuTrigger>
+																			<AppDropdownMenuContent
+																				align="end"
+																				onClick={(e) => e.stopPropagation()}
+																			>
+																				{!SESSION_TERMINAL_STATUSES.includes(
+																					session.status,
+																				) ? (
+																					<AppDropdownMenuItem
+																						icon={CalendarClock}
+																						onSelect={() => {
+																							setSelectedId(session.$id);
+																							setRescheduleOpen(true);
+																						}}
+																					>
+																						Reschedule
+																					</AppDropdownMenuItem>
+																				) : null}
+																				{!SESSION_TERMINAL_STATUSES.includes(
+																					session.status,
+																				) ? (
+																					<AppDropdownMenuItem
+																						icon={CheckCircle}
+																						onSelect={() => {
+																							setSelectedId(session.$id);
+																							setCompleteOpen(true);
+																						}}
+																					>
+																						Mark complete
+																					</AppDropdownMenuItem>
+																				) : null}
+																				{!SESSION_TERMINAL_STATUSES.includes(
+																					session.status,
+																				) ? (
+																					<AppDropdownMenuItem
+																						icon={Ban}
+																						tone="danger"
+																						onSelect={() => {
+																							setSelectedId(session.$id);
+																							setCancelOpen(true);
+																						}}
+																					>
+																						Cancel
+																					</AppDropdownMenuItem>
+																				) : null}
+																			</AppDropdownMenuContent>
+																		</DropdownMenu>
+																	) : null}
+																</TableCell>
+															</TableRow>
+														);
+													})}
+												</TableBody>
+											</CaalmDataTable>
+										)}
+									</CardContent>
+									{sessionsTotalPages > 1 ? (
+										<div className="shrink-0 rounded-b-lg border-t border-slate-200/80 bg-slate-50/60 px-4 sm:px-6">
+											<PageIndex
+												page={sessionsPageSafe}
+												totalItems={filteredSessions.length}
+												pageSize={SESSIONS_PAGE_SIZE}
+												onPageChange={setSessionsPage}
+												hideWhenSinglePage
+												className="mx-0 my-3 justify-between px-0"
+											/>
+										</div>
+									) : null}
+								</Card>
+							</motion.div>
 							<BulkActionDock
 								count={selectedSessionIds.size}
 								noun="simulation"
@@ -2227,7 +2277,7 @@ export function AuditLabClient({
 									Cancel
 								</button>
 							</BulkActionDock>
-						</>
+						</motion.div>
 					) : null}
 
 					{surface === "interview" ? (
@@ -2386,70 +2436,24 @@ export function AuditLabClient({
 								) : null}
 							</div>
 							{selected ? (
-								<div className="grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
-									<div className="rounded-lg border border-slate-200/80 bg-white/70 p-4">
-										<p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-											Phases
-										</p>
-										<SimulationPhaseStepper
-											currentPhase={resolveSimulationPhase(selected)}
-										/>
-										{canManageSessions ? (
-											<Button
-												type="button"
-												className="btn-primary mt-3 w-full!"
-												disabled={
-													busy ||
-													phaseIndex(resolveSimulationPhase(selected)) >=
-														SIMULATION_PHASES.length - 1
-												}
-												onClick={async () => {
-													const current = resolveSimulationPhase(selected);
-													const next =
-														SIMULATION_PHASES[
-															phaseIndex(current) + 1
-														] as ScriptSection | undefined;
-													if (!next) return;
-													setBusy(true);
-													try {
-														await patchSession(selected.$id, {
-															action: "set_phase",
-															phase: next,
-														});
-														await mutate();
-													} catch (err) {
-														onError(
-															err,
-															"I couldn't advance that simulation phase.",
-														);
-													} finally {
-														setBusy(false);
-													}
-												}}
-											>
-												Advance phase
-											</Button>
-										) : null}
-									</div>
-									<InterviewScriptCanvas
-										key={`${selected.$id}-${bankData?.data?.version ?? 0}-${bankData?.data?.questions?.length ?? 0}`}
-										sessionId={selected.$id}
-										questions={bankData?.data?.questions ?? []}
-										initialItemsJson={bankData?.data?.script?.itemsJson}
-										initialVersion={
-											bankData?.data?.version ??
-											bankData?.data?.script?.version ??
-											0
-										}
-										canEdit={canManageSessions}
-										isLoadingBank={!bankData}
-									  initialAiBannerDismissedSignature={
+								<InterviewScriptCanvas
+									key={`${selected.$id}-${bankData?.data?.version ?? 0}-${bankData?.data?.questions?.length ?? 0}`}
+									sessionId={selected.$id}
+									questions={bankData?.data?.questions ?? []}
+									initialItemsJson={bankData?.data?.script?.itemsJson}
+									initialVersion={
+										bankData?.data?.version ??
+										bankData?.data?.script?.version ??
+										0
+									}
+									canEdit={canManageSessions}
+									isLoadingBank={!bankData}
+									initialAiBannerDismissedSignature={
 										selected.aiBannerDismissedSignature
 									}
 									onDismissAiBanner={() => void mutate()}
 									onQuestionsChanged={() => void mutateBank()}
 								/>
-                  </div>
 							) : (
 								<p className="text-sm text-slate-500">
 									Schedule a simulation before building an interview script.
@@ -2596,11 +2600,31 @@ export function AuditLabClient({
 					) : null}
 
 					{surface === "practice" ? (
-						<PracticeRoundPanel
-							sessions={sessions}
-							canPractice={canPractice}
-							canScore={canScore}
-						/>
+						<div className="space-y-4">
+							<SegmentedToggle
+								value={practiceMode}
+								onChange={setPracticeMode}
+								ariaLabel="Practice mode"
+								className="max-w-xs"
+								tabs={[
+									{ value: "voice", label: "Voice interview" },
+									{ value: "text", label: "Text practice" },
+								]}
+							/>
+							{practiceMode === "voice" ? (
+								<VoiceInterviewPanel
+									sessions={sessions}
+									canPractice={canPractice}
+									canViewPracticePii={canViewPracticePii}
+								/>
+							) : (
+								<PracticeRoundPanel
+									sessions={sessions}
+									canPractice={canPractice}
+									canScore={canScore}
+								/>
+							)}
+						</div>
 					) : null}
 
 					{surface === "reports" ? (

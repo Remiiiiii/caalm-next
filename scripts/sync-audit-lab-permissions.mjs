@@ -7,6 +7,7 @@
  *   node scripts/sync-audit-lab-permissions.mjs --demo
  */
 
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { config as loadEnv } from "dotenv";
 
@@ -87,6 +88,21 @@ const AUDIT_LAB_PERMISSIONS = [
 		name: "Publish Audit Lab Reports",
 		category: "audit_lab",
 		description: "Publish and export readiness reports",
+	},
+	{
+		$id: "perm_auditlab_view_pii",
+		key: "audit_lab.view_practice_pii",
+		name: "View Audit Lab Practice PII",
+		category: "audit_lab",
+		description:
+			"Reveal raw practice transcripts and disable voice anonymization",
+	},
+	{
+		$id: "perm_auditlab_media",
+		key: "audit_lab.manage_practice_media",
+		name: "Manage Audit Lab Practice Media",
+		category: "audit_lab",
+		description: "Download or delete practice interview recordings",
 	},
 ];
 
@@ -198,7 +214,11 @@ async function ensureRolePermission(databaseId, roleId, permissionId) {
 		console.log(`  role_permission exists: ${roleId} -> ${permissionId}`);
 		return;
 	}
-	const rowId = `rp_${roleId}_${permissionId}`.slice(0, 36);
+	// Keep under Appwrite's 36-char id cap; hash so long permission ids never collide.
+	const rowId = `rp_${createHash("sha1")
+		.update(`${roleId}:${permissionId}`)
+		.digest("hex")
+		.slice(0, 33)}`;
 	await appwrite(
 		`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows`,
 		{

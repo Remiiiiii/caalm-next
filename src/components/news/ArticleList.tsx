@@ -11,10 +11,10 @@ import {
 	Info,
 	Loader2,
 	Megaphone,
-	MoreVertical,
 	Newspaper,
 	Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import type React from "react";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -22,9 +22,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 	DATA_TABLE_TOOLBAR_INSET,
 } from "@/components/ui/caalm-data-table";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
@@ -33,6 +37,7 @@ import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
 	DropdownMenu,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageIndex } from "@/components/ui/page-index";
@@ -519,10 +524,8 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 											Views
 										</TableHead>
-										<TableHead
-											className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-										>
-											Actions
+										<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+											<span className="sr-only">Actions</span>
 										</TableHead>
 									</TableRow>
 								</TableHeader>
@@ -540,13 +543,20 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 													}
 												/>
 											</TableCell>
-											<TableCell className="py-4 font-medium max-w-xs truncate text-slate-700">
+											<TableCell
+												className={cn(
+													DATA_TABLE_PRIMARY_TITLE,
+													"max-w-xs truncate py-4",
+												)}
+											>
 												{article.title}
 											</TableCell>
 											<TableCell className="py-4">
 												<div className="flex items-center gap-2">
 													{getTypeIcon(article.type)}
-													<span className="capitalize text-slate-700">
+													<span
+														className={cn(DATA_TABLE_BODY_TEXT, "capitalize")}
+													>
 														{article.type}
 													</span>
 												</div>
@@ -565,63 +575,85 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 											<TableCell className="py-4">
 												{getPriorityBadge(article.priority)}
 											</TableCell>
-											<TableCell className="py-4 text-slate-700">
+											<TableCell
+												className={cn(DATA_TABLE_BODY_TEXT, "py-4")}
+											>
 												{article.department || "-"}
 											</TableCell>
-											<TableCell className="py-4 text-slate-700">
+											<TableCell
+												className={cn(DATA_TABLE_BODY_TEXT, "py-4")}
+											>
 												{article.author}
 											</TableCell>
-											<TableCell className="py-4 text-slate-700">
+											<TableCell
+												className={cn(DATA_TABLE_BODY_TEXT, "py-4")}
+											>
 												{format(new Date(article.date), "MMM dd, yyyy")}
 											</TableCell>
-											<TableCell className="py-4 text-slate-700">
+											<TableCell
+												className={cn(DATA_TABLE_BODY_TEXT, "py-4")}
+											>
 												{article.viewCount || 0}
 											</TableCell>
 											<TableCell className="py-4 pl-3 pr-4 text-right">
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button
-															variant="ghost"
-															size="icon"
-															className="rounded-full transition-colors hover:bg-white/30"
+												<div
+													className={cn(
+														"inline-flex justify-end",
+														DATA_TABLE_ACTIONS_TRIGGER,
+													)}
+												>
+													<DropdownMenu>
+														<DropdownMenuTrigger
+															className="shad-no-focus rounded-full transition-colors hover:bg-white/30"
+															aria-label={`Actions for ${article.title}`}
 														>
-															<MoreVertical className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<AppDropdownMenuContent align="end">
-														<AppDropdownMenuItem
-															icon={Edit}
-															onClick={() => onEdit?.(article.id)}
-														>
-															Edit
-														</AppDropdownMenuItem>
-														{article.status === "published" ? (
+															<Image
+																src="/assets/icons/dots.svg"
+																alt=""
+																width={34}
+																height={34}
+															/>
+														</DropdownMenuTrigger>
+														<AppDropdownMenuContent align="end">
 															<AppDropdownMenuItem
-																icon={EyeOff}
-																onClick={() => handlePublish(article.id, false)}
+																icon={Edit}
+																onClick={() => onEdit?.(article.id)}
 															>
-																Unpublish
+																Edit
 															</AppDropdownMenuItem>
-														) : (
+															{article.status === "published" ? (
+																<AppDropdownMenuItem
+																	icon={EyeOff}
+																	onClick={() =>
+																		handlePublish(article.id, false)
+																	}
+																>
+																	Unpublish
+																</AppDropdownMenuItem>
+															) : (
+																<AppDropdownMenuItem
+																	icon={Eye}
+																	onClick={() =>
+																		handlePublish(article.id, true)
+																	}
+																>
+																	Publish
+																</AppDropdownMenuItem>
+															)}
+															<DropdownMenuSeparator />
 															<AppDropdownMenuItem
-																icon={Eye}
-																onClick={() => handlePublish(article.id, true)}
+																icon={Trash2}
+																tone="danger"
+																onClick={() => {
+																	setArticleToDelete(article.id);
+																	setDeleteDialogOpen(true);
+																}}
 															>
-																Publish
+																Delete
 															</AppDropdownMenuItem>
-														)}
-														<AppDropdownMenuItem
-															icon={Trash2}
-															tone="danger"
-															onClick={() => {
-																setArticleToDelete(article.id);
-																setDeleteDialogOpen(true);
-															}}
-														>
-															Delete
-														</AppDropdownMenuItem>
-													</AppDropdownMenuContent>
-												</DropdownMenu>
+														</AppDropdownMenuContent>
+													</DropdownMenu>
+												</div>
 											</TableCell>
 										</TableRow>
 									))}

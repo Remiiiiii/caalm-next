@@ -253,6 +253,18 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason:
 			"Protected by resolveOrgContext and restricted to templates belonging to the authenticated organization.",
 	},
+	{
+		path: "webhooks/livekit",
+		class: "webhook",
+		reason:
+			"LiveKit webhook signature verification (Authorization JWT via WebhookReceiver)",
+	},
+	{
+		path: "audit-lab/practice/voice/turn",
+		class: "token",
+		reason:
+			"Voice-agent worker shared secret (x-voice-agent-secret); no user session",
+	},
 ] as const;
 
 export const API_AUTHZ_ALLOWLIST_PATHS = new Set(

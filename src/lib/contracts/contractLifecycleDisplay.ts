@@ -14,6 +14,7 @@ const DECISION_STEP_KINDS = new Set<ApprovalStepKind>([
 
 const STUCK_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
 
+/** CAALM badge classes for non-split surfaces (preview sheet, etc.). */
 const STATUS_CLASSES: Record<string, string> = {
 	active: "bg-green/10 text-green border-green/20",
 	"pending-review": "bg-orange/10 text-orange border-orange/20",

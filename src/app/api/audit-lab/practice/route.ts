@@ -2,9 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { resolveAuditLabActor } from "@/lib/audit-lab/actor";
 import {
+	recordVoiceConsent,
 	requestFeedback,
 	scoreAnswer,
 	startPracticeRound,
+	startVoicePracticeRound,
 } from "@/lib/audit-lab/service";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { requirePermission } from "@/lib/rbac/middleware";
@@ -34,8 +36,29 @@ export async function POST(request: NextRequest) {
 			difficulty?: string;
 			retrievalMs?: number;
 			showMe?: boolean;
+			audioAnonymized?: boolean;
 		};
 		const action = String(body.action ?? "start");
+		if (action === "start_voice") {
+			const result = await startVoicePracticeRound(
+				resolved.actor,
+				String(body.sessionId ?? ""),
+				body.persona,
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "consent") {
+			const result = await recordVoiceConsent(String(body.attemptId ?? ""), {
+				audioAnonymized: body.audioAnonymized !== false,
+			});
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
 		if (action === "score") {
 			const result = await scoreAnswer(
 				resolved.actor,

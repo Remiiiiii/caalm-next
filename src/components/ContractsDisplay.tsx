@@ -31,9 +31,14 @@ import { LoadError } from "@/components/LoadError";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 	SortableDataTableHead,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -565,10 +570,8 @@ function SamContractsTable({
 						active={sortKey === "due"}
 						onClick={() => toggleSort("due")}
 					/>
-					<TableHead
-						className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
-					>
-						Actions
+					<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+						<span className="sr-only">Actions</span>
 					</TableHead>
 				</TableRow>
 			</TableHeader>
@@ -594,11 +597,13 @@ function SamContractsTable({
 							className={DATA_TABLE_BODY_ROW_BASE}
 						>
 							<TableCell className={cn(samRowPad, "pl-4 pr-3 min-w-0")}>
-								<p className="font-medium text-slate-700 line-clamp-2">
+								<p
+									className={cn(DATA_TABLE_PRIMARY_TITLE, "line-clamp-2")}
+								>
 									{contract.title}
 								</p>
 								{contract.solicitationNumber && (
-									<p className="text-xs text-slate-500 mt-0.5">
+									<p className={cn(DATA_TABLE_PRIMARY_SUBTEXT, "mt-0.5")}>
 										{contract.solicitationNumber}
 									</p>
 								)}
@@ -606,7 +611,8 @@ function SamContractsTable({
 							<TableCell
 								className={cn(
 									samRowPad,
-									"text-slate-700 hidden sm:table-cell max-w-56 truncate",
+									DATA_TABLE_BODY_TEXT,
+									"hidden max-w-56 truncate sm:table-cell",
 								)}
 							>
 								{organization || "—"}
@@ -630,30 +636,49 @@ function SamContractsTable({
 								)}
 							</TableCell>
 							<TableCell
-								className={cn(samRowPad, "text-slate-700 hidden lg:table-cell")}
+								className={cn(
+									samRowPad,
+									DATA_TABLE_BODY_TEXT,
+									"hidden lg:table-cell",
+								)}
 							>
 								{setAsideLabel || "—"}
 							</TableCell>
 							<TableCell
-								className={cn(samRowPad, "text-slate-700 hidden lg:table-cell")}
+								className={cn(
+									samRowPad,
+									DATA_TABLE_BODY_TEXT,
+									"hidden lg:table-cell",
+								)}
 							>
 								{stateLabel || "—"}
 							</TableCell>
 							<TableCell
-								className={cn(samRowPad, "text-slate-700 hidden xl:table-cell")}
+								className={cn(
+									samRowPad,
+									DATA_TABLE_BODY_TEXT,
+									"hidden xl:table-cell",
+								)}
 							>
 								{formatContractDate(contract.postedDate)}
 							</TableCell>
-							<TableCell className={cn(samRowPad, "text-slate-700")}>
+							<TableCell
+								className={cn(samRowPad, DATA_TABLE_BODY_TEXT)}
+							>
 								{contract.responseDeadLine
 									? formatContractDate(contract.responseDeadLine)
 									: "—"}
 							</TableCell>
 							<TableCell className={cn(samRowPad, "pl-3 pr-4")}>
-								<div className="flex items-center justify-end">
+								<div
+									className={cn(
+										"flex items-center justify-end",
+										DATA_TABLE_ACTIONS_TRIGGER,
+									)}
+								>
 									<DropdownMenu>
 										<DropdownMenuTrigger
-											className="shad-no-focus rounded-full transition-colors hover:bg-white/30 cursor-pointer"
+											className="shad-no-focus cursor-pointer rounded-full transition-colors hover:bg-white/30"
 											aria-label={`Actions for ${contract.title || "contract"}`}
 										>
 											<Image

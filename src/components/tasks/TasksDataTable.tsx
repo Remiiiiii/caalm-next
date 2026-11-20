@@ -5,9 +5,12 @@ import { useMemo, useState } from "react";
 import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
+	DATA_TABLE_ACTIONS_HEAD,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 	SortableDataTableHead,
 } from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -165,9 +168,9 @@ export function TasksDataTable({
 					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 						Linked
 					</TableHead>
-					<TableHead
-						className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-3 pr-4 text-right")}
-					/>
+					<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+						<span className="sr-only">Actions</span>
+					</TableHead>
 				</TableRow>
 			</TableHeader>
 			<TableBody className="[&_tr:last-child>td]:border-b-0">
@@ -198,7 +201,7 @@ export function TasksDataTable({
 						<TableCell className={rowPad}>
 							<div className="min-w-[14rem] max-w-md">
 								<div className="flex items-center gap-1.5">
-									<p className="truncate text-sm font-medium text-slate-700">
+									<p className={cn(DATA_TABLE_PRIMARY_TITLE, "truncate")}>
 										{task.title}
 									</p>
 									{task.createdViaAssistant ? (
@@ -216,7 +219,7 @@ export function TasksDataTable({
 									) : null}
 								</div>
 								{task.description ? (
-									<p className="truncate text-xs text-slate-500">
+									<p className={cn(DATA_TABLE_PRIMARY_SUBTEXT, "truncate")}>
 										{task.description}
 									</p>
 								) : null}

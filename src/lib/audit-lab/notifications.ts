@@ -31,7 +31,7 @@ export async function enqueueSessionReminders(session: ReviewSession) {
 				title: "Audit Lab session scheduled",
 				message: `${session.title} is on the calendar.`,
 				type: "info",
-				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionUrl: `/audit-lab/simulations/${session.$id}`,
 				actionText: "Open session",
 				triggerType: "scheduled",
 			});
@@ -93,7 +93,7 @@ export async function enqueuePrepDeadlineReminders(session: ReviewSession) {
 					? `Prep for "${session.title}" is due on ${when} (${daysUntil} day${daysUntil === 1 ? "" : "s"} left).`
 					: `Prep for "${session.title}" is due on ${when}. A calendar deadline event was added.`,
 				type: approaching ? "deadline-approaching" : "info",
-				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionUrl: `/audit-lab/simulations/${session.$id}`,
 				actionText: "Open simulation",
 				triggerType: "scheduled",
 			});
@@ -131,7 +131,7 @@ export async function notifySessionRescheduled(session: ReviewSession) {
 				title: "Audit Lab session rescheduled",
 				message: `${session.title} moved to ${formatRescheduledTime(session.scheduledAt)}.`,
 				type: "info",
-				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionUrl: `/audit-lab/simulations/${session.$id}`,
 				actionText: "Open session",
 				triggerType: "automatic",
 			});
@@ -154,7 +154,7 @@ export async function notifySessionCompleted(session: ReviewSession) {
 				title: "Audit Lab session complete",
 				message: `${session.title} is complete. The session report is ready.`,
 				type: "success",
-				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionUrl: `/audit-lab/simulations/${session.$id}`,
 				actionText: "View report",
 				triggerType: "automatic",
 			});

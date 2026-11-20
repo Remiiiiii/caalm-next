@@ -10,7 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** Contracts-size hollow dots; always visible in the Actions column. */
+/** Contracts-size hollow dots; parent wraps with DATA_TABLE_ACTIONS_TRIGGER. */
 export function PendingInvitationRowActions({
 	label,
 	busy = false,

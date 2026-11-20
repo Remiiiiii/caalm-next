@@ -61,15 +61,15 @@ export function UserManagementRowActions({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="ml-auto h-8 w-8 border-0 bg-transparent p-0 text-slate-500 shadow-none shad-no-focus hover:bg-transparent hover:text-[#0f5384] focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					className="shad-no-focus ml-auto h-[34px] w-[34px] border-0 bg-transparent p-0 text-slate-500 shadow-none hover:bg-white/30 hover:text-[#0f5384] focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 					aria-label={`Actions for ${user.fullName}`}
 				>
 					<Image
 						src="/assets/icons/dots.svg"
 						alt=""
-						width={24}
-						height={24}
-						className="h-6 w-6"
+						width={34}
+						height={34}
+						className="h-[34px] w-[34px]"
 					/>
 				</Button>
 			</DropdownMenuTrigger>

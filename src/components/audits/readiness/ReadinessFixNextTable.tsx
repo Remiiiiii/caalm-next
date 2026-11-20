@@ -12,9 +12,12 @@ import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_CELL,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageIndex } from "@/components/ui/page-index";
@@ -217,11 +220,14 @@ export function ReadinessFixNextTable({
 										<div className="flex flex-col">
 											<Link
 												href={row.moduleLink}
-												className="font-semibold text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+												className={cn(
+													DATA_TABLE_PRIMARY_TITLE,
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]",
+												)}
 											>
 												{row.itemTitle ?? row.title}
 											</Link>
-											<span className="caption text-slate-500">
+											<span className={DATA_TABLE_PRIMARY_SUBTEXT}>
 												{[
 													KIND_LABEL[row.itemKind ?? ""] ?? row.moduleLabel,
 													row.category,
@@ -263,11 +269,15 @@ export function ReadinessFixNextTable({
 										</div>
 									</TableCell>
 									<TableCell
-										className={cn(DATA_TABLE_CELL, "whitespace-nowrap")}
+										className={cn(
+											DATA_TABLE_CELL,
+											DATA_TABLE_BODY_TEXT,
+											"whitespace-nowrap",
+										)}
 									>
 										{formatDay(row.dueDate)}
 									</TableCell>
-									<TableCell className={cn(DATA_TABLE_CELL, "text-slate-600")}>
+									<TableCell className={cn(DATA_TABLE_CELL, DATA_TABLE_BODY_TEXT)}>
 										<AssigneeCell
 											row={row}
 											users={users}

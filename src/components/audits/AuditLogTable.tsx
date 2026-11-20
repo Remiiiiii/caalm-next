@@ -239,10 +239,10 @@ export function AuditLogTable({
 										: "—"}
 								</TableCell>
 								<TableCell className={rowPad}>
-									<div className="text-sm font-medium text-slate-700">
+									<div className="font-semibold text-[#0f5384]">
 										{log.user_name}
 									</div>
-									<div className="text-xs text-slate-500">{log.user_email}</div>
+									<div className="caption text-slate-500">{log.user_email}</div>
 								</TableCell>
 								<TableCell className={rowPad}>
 									{getActionBadge(log.action)}

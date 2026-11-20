@@ -8,7 +8,7 @@
  * Usage:
  *   node scripts/sync-vercel-env-parity.mjs
  *   node scripts/sync-vercel-env-parity.mjs --apply
- *   node scripts/sync-vercel-env-parity.mjs --apply --include-empty
+--include-empty
  */
 
 import { spawnSync } from "node:child_process";

@@ -11,6 +11,8 @@ export type LabCapabilities = {
 	canRunPractice: boolean;
 	canScorePractice: boolean;
 	canPublishReports: boolean;
+	canViewPracticePii: boolean;
+	canManagePracticeMedia: boolean;
 	readOnly: boolean;
 };
 
@@ -34,6 +36,14 @@ export function resolveLabCapabilities(input: {
 	const runPractice = has(permissions, PERMISSIONS.AUDIT_LAB.RUN_PRACTICE);
 	const scorePractice = has(permissions, PERMISSIONS.AUDIT_LAB.SCORE_PRACTICE);
 	const publishReports = has(permissions, PERMISSIONS.AUDIT_LAB.PUBLISH_REPORTS);
+	const viewPracticePii = has(
+		permissions,
+		PERMISSIONS.AUDIT_LAB.VIEW_PRACTICE_PII,
+	);
+	const managePracticeMedia = has(
+		permissions,
+		PERMISSIONS.AUDIT_LAB.MANAGE_PRACTICE_MEDIA,
+	);
 
 	const fullOrg =
 		manageSessions || manageEvidence || coordinateEvidence || publishReports;
@@ -54,6 +64,8 @@ export function resolveLabCapabilities(input: {
 		canRunPractice: runPractice,
 		canScorePractice: scorePractice || manageSessions,
 		canPublishReports: publishReports || manageSessions,
+		canViewPracticePii: viewPracticePii,
+		canManagePracticeMedia: managePracticeMedia || manageSessions,
 		readOnly: view && !canMutate && !runPractice,
 	};
 }
