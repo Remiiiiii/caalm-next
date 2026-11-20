@@ -97,6 +97,8 @@ export const PERMISSIONS = {
 		RUN_PRACTICE: "audit_lab.run_practice",
 		SCORE_PRACTICE: "audit_lab.score_practice",
 		PUBLISH_REPORTS: "audit_lab.publish_reports",
+		VIEW_PRACTICE_PII: "audit_lab.view_practice_pii",
+		MANAGE_PRACTICE_MEDIA: "audit_lab.manage_practice_media",
 	},
 
 	// IT/Software Engineering Permissions
@@ -623,6 +625,19 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Publish Audit Lab Reports",
 		category: "audit_lab",
 		description: "Publish and export session and department readiness reports",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.VIEW_PRACTICE_PII,
+		name: "View Audit Lab Practice PII",
+		category: "audit_lab",
+		description:
+			"Reveal raw practice transcripts and disable voice anonymization",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.MANAGE_PRACTICE_MEDIA,
+		name: "Manage Audit Lab Practice Media",
+		category: "audit_lab",
+		description: "Download or delete practice interview recordings",
 	},
 
 	// IT/Software Engineering

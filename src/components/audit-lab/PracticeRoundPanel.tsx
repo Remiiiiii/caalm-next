@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+	formatPracticeElapsed,
+	PracticeLiveShell,
+	PracticeProgressBar,
+	PracticeSessionPersonaControls,
+} from "@/components/audit-lab/PracticeChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +38,10 @@ export function PracticeRoundPanel({
 	const [dimensions, setDimensions] = useState<Record<string, number> | null>(
 		null,
 	);
+	const [answeredCount, setAnsweredCount] = useState(0);
+	const [elapsed, setElapsed] = useState(0);
 	const startedAt = useRef<number | null>(null);
+	const roundStartedAt = useRef<number | null>(null);
 	const [busy, setBusy] = useState(false);
 
 	useEffect(() => {
@@ -44,6 +53,15 @@ export function PracticeRoundPanel({
 		}, 1000);
 		return () => clearInterval(id);
 	}, [showMe, attemptId, prompt]);
+
+	useEffect(() => {
+		if (!attemptId || !roundStartedAt.current) return;
+		const id = setInterval(() => {
+			if (!roundStartedAt.current) return;
+			setElapsed(Math.floor((Date.now() - roundStartedAt.current) / 1000));
+		}, 1000);
+		return () => clearInterval(id);
+	}, [attemptId]);
 
 	async function start() {
 		if (!sessionId) return;
@@ -72,6 +90,9 @@ export function PracticeRoundPanel({
 			setShowMe(/show me/i.test(json.data?.firstQuestion?.prompt ?? ""));
 			setAnswer("");
 			setDimensions(null);
+			setAnsweredCount(0);
+			setElapsed(0);
+			roundStartedAt.current = Date.now();
 		} catch (err) {
 			toast({
 				title: "Practice",
@@ -112,6 +133,7 @@ export function PracticeRoundPanel({
 			};
 			if (!res.ok) throw new Error(json.error || "Score failed");
 			setDimensions(json.data?.dimensions ?? null);
+			setAnsweredCount((n) => n + 1);
 			if (json.data?.slowRetrieval) {
 				toast({
 					title: "Retrieval flagged",
@@ -127,7 +149,10 @@ export function PracticeRoundPanel({
 		} catch (err) {
 			toast({
 				title: "Practice",
-				description: toUserFacingErrorMessage(err, "Could not score that answer."),
+				description: toUserFacingErrorMessage(
+					err,
+					"Could not score that answer.",
+				),
 				variant: "destructive",
 			});
 		} finally {
@@ -145,45 +170,43 @@ export function PracticeRoundPanel({
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-wrap gap-3">
-				<select
-					className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
-					value={sessionId}
-					onChange={(e) => setSessionId(e.target.value)}
-					aria-label="Simulation"
-				>
-					{sessions.map((s) => (
-						<option key={s.$id} value={s.$id}>
-							{s.title}
-						</option>
-					))}
-				</select>
-				<select
-					className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
-					value={persona}
-					onChange={(e) =>
-						setPersona(e.target.value as (typeof AUDITOR_PERSONAS)[number])
+			{!attemptId ? (
+				<PracticeSessionPersonaControls
+					sessions={sessions}
+					sessionId={sessionId}
+					onSessionId={setSessionId}
+					persona={persona}
+					onPersona={setPersona}
+					actions={
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={busy || !sessionId}
+							onClick={() => void start()}
+						>
+							Start practice
+						</Button>
 					}
-					aria-label="Auditor persona"
-				>
-					{AUDITOR_PERSONAS.map((p) => (
-						<option key={p} value={p}>
-							{p.replaceAll("_", " ")}
-						</option>
-					))}
-				</select>
-				<Button
-					type="button"
-					className="btn-primary"
-					disabled={busy || !sessionId}
-					onClick={() => void start()}
-				>
-					Start practice
-				</Button>
-			</div>
+				/>
+			) : null}
 
 			{attemptId ? (
-				<div className="space-y-3 rounded-lg border border-slate-200 p-4">
+				<PracticeLiveShell
+					headerLeft={
+						<span className="flex items-center gap-1.5 text-xs font-semibold text-[#078fab]">
+							<span
+								className="h-2 w-2 rounded-full bg-[#078fab]"
+								aria-hidden
+							/>
+							Text practice — {formatPracticeElapsed(elapsed)}
+						</span>
+					}
+				>
+					<PracticeProgressBar
+						label="Answers submitted"
+						current={answeredCount}
+						total={Math.max(answeredCount + 1, answeredCount)}
+					/>
 					<p className="text-sm font-medium text-[#0f5384]">{prompt}</p>
 					{showMe ? (
 						<p
@@ -213,13 +236,16 @@ export function PracticeRoundPanel({
 					{dimensions ? (
 						<ul className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-4">
 							{Object.entries(dimensions).map(([k, v]) => (
-								<li key={k} className="rounded border border-slate-200 px-2 py-1">
+								<li
+									key={k}
+									className="rounded border border-slate-200/80 bg-white/40 px-2 py-1"
+								>
 									{k}: {v}
 								</li>
 							))}
 						</ul>
 					) : null}
-				</div>
+				</PracticeLiveShell>
 			) : null}
 		</div>
 	);

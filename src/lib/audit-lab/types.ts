@@ -65,6 +65,8 @@ export type ReviewSession = {
 	departmentsJson?: string;
 	timezone?: string;
 	readinessSnapshotId?: string;
+	/** 0–100 from latest voice practice scorecard; omit until first graded interview. */
+	practiceReadinessPct?: number;
 	linkedAuditDocIds?: string;
 	auditTrailJson?: string;
 	calendarEventId?: string;
@@ -114,6 +116,16 @@ export type ReviewAttempt = {
 	callId?: string;
 	recordingUrl?: string;
 	consentAt?: string;
+	/** LiveKit RoomComposite egress id while recording. */
+	egressId?: string;
+	/** Appwrite file id in the practice recordings bucket. */
+	recordingFileId?: string;
+	/** PII-redacted transcript JSON (answers/citations scrubbed). */
+	transcriptRedactedJson?: string;
+	/** Data residency region stamp (e.g. eu, us). */
+	dataResidencyRegion?: string;
+	/** True when the browser published pitch-shifted mic audio. */
+	audioAnonymized?: boolean;
 	createdByUserId: string;
 };
 
@@ -124,6 +136,7 @@ export type VoiceTranscriptTurn = {
 	answer: string;
 	at: string;
 	citedEvidence?: string;
+	answerQuality?: "strong" | "adequate" | "weak";
 };
 
 export type ReviewGap = {

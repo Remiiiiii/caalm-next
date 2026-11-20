@@ -8,6 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
+	isExpiryAlertModalEnabled,
+	setExpiryAlertModalEnabled,
+} from "@/lib/expiry/expiry-alert-pref";
+import {
 	disableDesktopAlerts,
 	enableDesktopAlerts,
 } from "@/lib/push/notifications-client";
@@ -19,8 +23,13 @@ const NotificationSettings = () => {
 		desktopAlerts: false,
 		weeklyReports: false,
 	});
+	const [expiryAlertModal, setExpiryAlertModal] = useState(true);
 	const { toast } = useToast();
 	const { user } = useAuth();
+
+	useEffect(() => {
+		setExpiryAlertModal(isExpiryAlertModalEnabled());
+	}, []);
 
 	useEffect(() => {
 		const load = async () => {
@@ -162,6 +171,31 @@ const NotificationSettings = () => {
 								weeklyReports: checked,
 							}))
 						}
+					/>
+				</div>
+
+				<div className="flex items-center justify-between">
+					<div className="space-y-0.5">
+						<Label className="text-sm text-light-200">Expiry alert modal</Label>
+						<p className="text-xs text-light-200">
+							Auto-open the full-screen renewal queue when contracts or
+							licenses are due soon
+						</p>
+					</div>
+					<Switch
+						checked={expiryAlertModal}
+						onCheckedChange={(checked) => {
+							setExpiryAlertModal(checked);
+							setExpiryAlertModalEnabled(checked);
+							toast({
+								title: checked
+									? "Expiry alert modal on"
+									: "Expiry alert modal off",
+								description: checked
+									? "The renewal queue can open automatically again."
+									: "The modal will not auto-open on this browser.",
+							});
+						}}
 					/>
 				</div>
 			</div>

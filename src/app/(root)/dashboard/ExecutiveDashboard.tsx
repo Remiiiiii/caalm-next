@@ -75,8 +75,10 @@ import {
 	SelectItem,
 	SelectScrollable,
 } from "@/components/ui/select-scrollable";
+import { Label } from "@/components/ui/label";
 import { StatCardSkeleton } from "@/components/ui/skeletons";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { Switch } from "@/components/ui/switch";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +87,10 @@ import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
 import { isDemoMode } from "@/lib/config/demo-mode";
+import {
+	isExpiryAlertModalEnabled,
+	setExpiryAlertModalEnabled,
+} from "@/lib/expiry/expiry-alert-pref";
 import { refreshDashboardInvitations } from "@/lib/ui/refreshDashboardInvitations";
 import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 import { cn } from "@/lib/utils";
@@ -264,6 +270,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	});
 	const showDevExpiryTest = process.env.NODE_ENV === "development";
 	const showDemoExpiryTest = isDemoMode();
+	const [expiryAlertModalOn, setExpiryAlertModalOn] = useState(true);
+	useEffect(() => {
+		setExpiryAlertModalOn(isExpiryAlertModalEnabled());
+	}, []);
 
 	// Desktop push View → /dashboard?expiryEntity=contract|license&expiryId=…
 	// Handle each deep-link once — re-running after open collapses a good
@@ -681,23 +691,25 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div> */}
 
 								<div className="flex flex-col items-end gap-2">
-									{/* {showDevExpiryTest && (
-										<Button
-											onClick={triggerDevTestModal}
-											variant="outline"
-											size="sm"
-											className={cn(
-												"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
-												"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
-											)}
-										>
-											<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
-												Dev
-											</span>
-											<Pencil className="h-3.5 w-3.5" />
-											Test expiry modal
-										</Button>
-									)} */}
+									{showDevExpiryTest ? (
+										<div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5">
+											<Label
+												htmlFor="expiry-alert-modal-switch"
+												className="cursor-pointer text-xs font-medium text-slate-600"
+											>
+												Expiry alerts
+											</Label>
+											<Switch
+												id="expiry-alert-modal-switch"
+												checked={expiryAlertModalOn}
+												onCheckedChange={(checked) => {
+													setExpiryAlertModalOn(checked);
+													setExpiryAlertModalEnabled(checked);
+												}}
+												aria-label="Turn expiry alert modal on or off"
+											/>
+										</div>
+									) : null}
 									{showDemoExpiryTest && (
 										<Button
 											onClick={triggerDemoTestModal}

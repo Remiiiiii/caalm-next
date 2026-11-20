@@ -7,7 +7,10 @@
 		"node": "^18.18.0 || ^19.8.0 || >=20.0.0 <25.0.0"
 	},
 	"scripts": {
-		"dev": "next dev --turbo",
+		"dev": "pnpm --parallel --filter caalm-next --filter @caalm/voice-agent run start:dev",
+		"start:dev": "next dev --turbo",
+		"dev:web": "pnpm run start:dev",
+		"dev:voice": "pnpm --filter @caalm/voice-agent run start:dev",
 		"dev:setup": "node scripts/setup-dev.js && pnpm run dev",
 		"restart": "taskkill /F /IM node.exe 2>nul || echo \"No Node processes to kill\" && pnpm run dev",
 		"build": "next build",

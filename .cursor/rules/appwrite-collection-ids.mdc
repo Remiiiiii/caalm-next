@@ -12,16 +12,18 @@ alwaysApply: false
 
 # Appwrite collection / table / bucket IDs (HARD RULE)
 
+**No exceptions for new creates.** Every new Appwrite **database schema resource** (table, collection, column is not an id, but table/collection) and every new **storage bucket** must use an alphanumeric `$id`. This applies without exception to agents and humans creating resources in this repo.
+
 **Enforce before every create.** The resource `$id` must be **alphanumeric only** (`^[a-zA-Z0-9]{1,36}$`). The human label goes in **`name`**, never in `$id`.
 
-Underscores, hyphens, and dots in `$id` are **forbidden** for new CAALM tables/collections/buckets (even if Appwrite accepts them).
+Underscores, hyphens, and dots in `$id` are **forbidden** (even if Appwrite accepts them).
 
 ## Required
 
 - `$id` like `69a3f91200a8c4d1e2f0` or `ID.unique()` (a-z, A-Z, 0-9 only; max 36 chars).
 - `name` holds the readable label (e.g. name `pto_roadmap_sections`, id `69f3c201001f4e8c2e01`).
 - Real alphanumeric ID → `.env.local` / `.env.demo.local` + `appwriteConfig` **fallback** (same ID).
-- `.env.example` / `.env.demo.example` → snake_case **placeholder** only (`pto_roadmap_sections_collection_id`), never a live `$id` and never the table name reused as the env value.
+- `.env.example` / `.env.demo.example` → snake_case **placeholder** only (`pto_roadmap_sections_collection_id`), never a live `$id` and never the table/bucket **name** reused as the env value.
 
 ## Forbidden (stop and rewrite)
 
@@ -30,15 +32,19 @@ Underscores, hyphens, and dots in `$id` are **forbidden** for new CAALM tables/c
 ❌ table_id = "org_units"
 ❌ table_id = "pto_roadmap_sections"
 ❌ bucket_id = "ticket_attachments"
+❌ bucket_id = "audit_lab_practice_recordings"
 ❌ config fallback = "pto_roadmap_tasks"   // snake_case name as ID
 ❌ .env.example value = "pto_roadmap_sections"  // looks like a live id/name
+❌ .env.example value = "audit_lab_practice_recordings"  // name used as id
 ```
 
 ```text
 ✅ table_id = "69f3c201001f4e8c2e01"  (name: pto_roadmap_sections)
 ✅ bucket_id = "69b8a204004c7b1f5d04"  (name: ticket_attachments)
+✅ bucket_id = "69c4b208001f4e8c2110"  (name: audit_lab_practice_recordings)
 ✅ config fallback = "69f3c201001f4e8c2e01"
 ✅ .env.example = pto_roadmap_sections_collection_id
+✅ .env.example = audit_lab_practice_recordings_bucket_id
 ```
 
 ## Agent checklist (do not skip)
@@ -47,12 +53,13 @@ Underscores, hyphens, and dots in `$id` are **forbidden** for new CAALM tables/c
 2. Set `name` to the readable label.
 3. Put the real id only in gitignored env + `appwriteConfig` fallback.
 4. Example env files: placeholders only (`env-example-placeholders.mdc`).
-5. Schema change → prod first, then `node scripts/sync-demo-database-schema.mjs --apply` (demo keeps the **same** alphanumeric `$id`).
+5. Schema change → prod first, then `node scripts/sync-demo-database-schema.mjs --apply` (demo keeps the **same** alphanumeric `$id` for tables).
+6. **Never** “fix later” with a snake_case `$id`. Recreate with an alphanumeric `$id` in the same task if a mistake was made.
 
-## Known exception (do not copy)
+## Historical only (do not copy; do not create new ones like this)
 
-- Demo `push_subscriptions` may use a name-based id while prod uses a hex id; sync maps by **table name**. Do **not** use that pattern for new tables.
+- Demo `push_subscriptions` may still use a name-based id while prod uses a hex id; sync maps by **table name**. That is a **legacy** parity quirk. **New** tables, collections, and buckets must not follow it. No new exceptions.
 
 ## In-memory reminder
 
-When planning or creating Appwrite resources in this repo: `$id` = opaque alphanumeric; `name` = label; env example = placeholder. Never ship a snake_case string as `$id` or as the config fallback.
+When planning or creating Appwrite resources in this repo: `$id` = opaque alphanumeric; `name` = label; env example = placeholder. Never ship a snake_case string as `$id` or as the config fallback. **Zero exceptions for new creates.**

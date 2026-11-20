@@ -87,6 +87,7 @@ export async function updateSessionRow(
 			| "timezone"
 			| "calendarEventId"
 			| "aiBannerDismissedSignature"
+			| "practiceReadinessPct"
 		>
 	>,
 ): Promise<ReviewSession> {
@@ -225,6 +226,11 @@ export async function updateAttemptRow(
 			| "callId"
 			| "recordingUrl"
 			| "consentAt"
+			| "egressId"
+			| "recordingFileId"
+			| "transcriptRedactedJson"
+			| "dataResidencyRegion"
+			| "audioAnonymized"
 		>
 	>,
 ): Promise<ReviewAttempt> {

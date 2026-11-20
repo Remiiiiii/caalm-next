@@ -213,9 +213,7 @@ function sessionStatusLabel(status: string): string {
 		.join(" ");
 }
 
-// shortcut: ReviewSession has no readiness score field yet, so the bar length
-// is a static per-status placeholder, not a computed score. Upgrade once
-// readinessSnapshotId resolves to a real percentage.
+// Fallback when practiceReadinessPct is unset: static per-status placeholder.
 const SESSION_READINESS_BY_STATUS: Record<
 	string,
 	{ pct: number; colorClass: string; faded?: boolean }
@@ -230,6 +228,28 @@ const SESSION_READINESS_BY_STATUS: Record<
 	cancelled: { pct: 0, colorClass: "bg-slate-300" },
 };
 
+function sessionReadinessDisplay(session: ReviewSession): {
+	pct: number;
+	colorClass: string;
+	faded?: boolean;
+	fromPractice: boolean;
+} {
+	const fromPractice =
+		typeof session.practiceReadinessPct === "number" &&
+		Number.isFinite(session.practiceReadinessPct);
+	if (fromPractice) {
+		const pct = Math.max(0, Math.min(100, Math.round(session.practiceReadinessPct)));
+		const colorClass =
+			pct >= 80 ? "bg-green" : pct >= 50 ? "bg-[#078fab]" : "bg-orange";
+		return { pct, colorClass, fromPractice: true };
+	}
+	const fallback = SESSION_READINESS_BY_STATUS[session.status] ?? {
+		pct: 0,
+		colorClass: "bg-slate-300",
+	};
+	return { ...fallback, fromPractice: false };
+}
+
 type SessionSortKey = "scheduled" | "title" | "readiness";
 type SessionSort = { key: SessionSortKey; direction: "asc" | "desc" };
 
@@ -243,8 +263,8 @@ function compareSessions(
 		case "title":
 			return a.title.localeCompare(b.title) * dir;
 		case "readiness": {
-			const ra = SESSION_READINESS_BY_STATUS[a.status]?.pct ?? 0;
-			const rb = SESSION_READINESS_BY_STATUS[b.status]?.pct ?? 0;
+			const ra = sessionReadinessDisplay(a).pct;
+			const rb = sessionReadinessDisplay(b).pct;
 			return (ra - rb) * dir;
 		}
 		case "scheduled": {
@@ -553,6 +573,7 @@ export function AuditLabClient({
 	const canManageEvidence = capabilities.canManageEvidence;
 	const canPractice = capabilities.canRunPractice;
 	const canScore = capabilities.canScorePractice;
+	const canViewPracticePii = capabilities.canViewPracticePii;
 
 	const { toast } = useToast();
 	const searchParams = useSearchParams();
@@ -1992,9 +2013,7 @@ export function AuditLabClient({
 														const participants = parseParticipants(
 															session.participantsJson,
 														);
-														const readiness = SESSION_READINESS_BY_STATUS[
-															session.status
-														] ?? { pct: 0, colorClass: "bg-slate-300" };
+														const readiness = sessionReadinessDisplay(session);
 														const isSelected = selectedSessionIds.has(
 															session.$id,
 														);
@@ -2596,6 +2615,7 @@ export function AuditLabClient({
 								<VoiceInterviewPanel
 									sessions={sessions}
 									canPractice={canPractice}
+									canViewPracticePii={canViewPracticePii}
 								/>
 							) : (
 								<PracticeRoundPanel

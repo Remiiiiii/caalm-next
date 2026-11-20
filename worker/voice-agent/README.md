@@ -27,11 +27,15 @@ copy) for the full architecture this implements.
 
 ## Running it
 
+From the **repo root**, `pnpm run dev` starts Next.js and this worker together
+(`dev:web` + `dev:voice`). You can still run the worker alone:
+
 ```bash
 cd worker/voice-agent
 cp .env.example .env.local   # fill in real values — see below
 pnpm install                 # from the repo root also works (it's a workspace member)
 pnpm dev                     # LiveKit Agents' dev mode (hot reload, connects to LIVEKIT_URL)
+# or from repo root: pnpm run dev:voice
 ```
 
 ## Production deployment
@@ -105,10 +109,11 @@ Option A's generated one is specific to LiveKit Cloud's build.
 ## Environment variables
 
 See `.env.example`. Four are shared with the main app (use the same values):
-`LIVEKIT_*`, `CLAUDE_API_KEY`/`CLAUDE_SONNET_MODEL`, `ELEVENLABS_API_KEY`/`ELEVENLABS_VOICE_ID`.
-Two are new to this worker: `DEEPGRAM_API_KEY` (speech-to-text — sign up at
-console.deepgram.com) and `VOICE_AGENT_SHARED_SECRET` (must match the same
-env var in the main app exactly).
+`LIVEKIT_*`, `CLAUDE_API_KEY`/`CLAUDE_SONNET_MODEL`, `ELEVENLABS_API_KEY`.
+Set `ELEVENLABS_AUDIT_LAB_VOICE_ID` for the interviewer voice (falls back to
+`ELEVENLABS_VOICE_ID` if unset). Two are new to this worker: `DEEPGRAM_API_KEY`
+(speech-to-text — sign up at console.deepgram.com) and
+`VOICE_AGENT_SHARED_SECRET` (must match the same env var in the main app exactly).
 
 ## Guardrails
 
@@ -119,13 +124,11 @@ env var in the main app exactly).
 - A hard 20-minute wall-clock cap ends the call even if the model never
   calls `conclude_interview`.
 
-## Known gaps (Phase 1 scope — see the roadmap doc)
+## Phase 3 capabilities
 
-- Voice-only — no video track published or subscribed.
-- No live-caption UI wiring confirmed end-to-end yet (LiveKit's own
-  transcription protocol should carry it automatically via `AgentSession`'s
-  default `RoomIO`, but this hasn't been verified against a real call).
-- No Dockerfile checked into this repo yet — `lk agent create` generates one
-  for LiveKit Cloud hosting; bring your own for Option B.
-- PII redaction and multi-region recording storage are explicitly out of
-  scope for Phase 1.
+- Browser camera + optional Synthesia talking-head (`SYNTHESIA_API_KEY` / `SYNTHESIA_AVATAR_ID`).
+- Client-side voice anonymization before mic publish; live captions PII-scrubbed.
+- RoomComposite egress copied into Appwrite practice recordings bucket.
+- Transcript redaction + `audit_lab.view_practice_pii` / `manage_practice_media`.
+- `AUDIT_LAB_DATA_RESIDENCY_REGION` stamped on attempts (required in production).
+- LiveKit Cloud region and Appwrite region must match that stamp (no multi-cloud failover).

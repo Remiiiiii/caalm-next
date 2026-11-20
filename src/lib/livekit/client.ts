@@ -42,7 +42,8 @@ export async function createVoiceInterviewRoom(params: {
 	await roomServiceClient().createRoom({
 		name: params.roomName,
 		emptyTimeout: 5 * 60,
-		maxParticipants: 2,
+		// User + voice agent + optional Synthesia avatar worker.
+		maxParticipants: 4,
 	});
 	await agentDispatchClient().createDispatch(
 		params.roomName,

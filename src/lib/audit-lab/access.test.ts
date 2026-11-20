@@ -34,6 +34,18 @@ describe("resolveLabCapabilities", () => {
 		expect(caps.canCoordinateEvidence).toBe(true);
 		expect(caps.canManageEvidence).toBe(true);
 	});
+
+	it("maps practice PII and media permissions", () => {
+		const caps = resolveLabCapabilities({
+			permissions: [
+				PERMISSIONS.AUDIT_LAB.VIEW,
+				PERMISSIONS.AUDIT_LAB.VIEW_PRACTICE_PII,
+				PERMISSIONS.AUDIT_LAB.MANAGE_PRACTICE_MEDIA,
+			],
+		});
+		expect(caps.canViewPracticePii).toBe(true);
+		expect(caps.canManagePracticeMedia).toBe(true);
+	});
 });
 
 describe("sessionInScope", () => {

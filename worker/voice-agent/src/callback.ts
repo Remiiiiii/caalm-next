@@ -18,6 +18,7 @@ export async function recordTurn(params: {
 	question: string;
 	answer: string;
 	citedEvidence?: string;
+	answerQuality?: "strong" | "adequate" | "weak";
 }): Promise<void> {
 	const res = await fetch(`${apiBase()}/api/audit-lab/practice/voice/turn`, {
 		method: "POST",

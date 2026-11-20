@@ -1,9 +1,15 @@
+import type { EgressInfo } from "livekit-server-sdk";
 import { listFindings } from "@/lib/audit-upload/store";
 import {
 	createParticipantToken,
 	createVoiceInterviewRoom,
 	livekitBrowserUrl,
 } from "@/lib/livekit/client";
+import {
+	attemptIdFromRoomName,
+	egressFileDownloadUrl,
+	startPracticeRoomEgress,
+} from "@/lib/livekit/egress";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import {
 	markSessionCalendarEventCancelled,
@@ -62,8 +68,26 @@ import {
 	type SessionRole,
 	type SessionStatus,
 } from "./types";
+import { scorecardToPracticeReadinessPct } from "./voice/coverage";
 import { gradeVoiceTranscript } from "./voice/grade";
+import { redactTranscriptTurns } from "./voice/pii";
+import {
+	deletePracticeRecordingFile,
+	storePracticeRecordingFromUrl,
+} from "./voice/recordings";
 import { buildVoiceRubric, type VoiceAgentJobMetadata } from "./voice/rubric";
+
+function requireDataResidencyRegion(): string | { error: string } {
+	const region = process.env.AUDIT_LAB_DATA_RESIDENCY_REGION?.trim();
+	if (region) return region;
+	if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
+		return {
+			error:
+				"Practice interviews need a data residency region configured. Ask an admin to set AUDIT_LAB_DATA_RESIDENCY_REGION.",
+		};
+	}
+	return "local";
+}
 
 type Actor = {
 	userId: string;
@@ -74,7 +98,7 @@ type Actor = {
 
 function audit(
 	actor: Actor,
-	action: "create" | "update",
+	action: "create" | "update" | "delete",
 	summary: string,
 	target: {
 		type: string;
@@ -942,6 +966,9 @@ export async function startVoicePracticeRound(
 			error: "Generate a question bank before starting a voice interview.",
 		};
 	}
+	const residency = requireDataResidencyRegion();
+	if (typeof residency === "object") return residency;
+
 	const attempt = await createAttemptRow({
 		orgId: actor.orgId,
 		sessionId,
@@ -951,6 +978,7 @@ export async function startVoicePracticeRound(
 		transcriptJson: JSON.stringify([]),
 		scoresJson: JSON.stringify([]),
 		status: "in_progress",
+		dataResidencyRegion: residency,
 		createdByUserId: actor.userId,
 	});
 	const roomName = `review-attempt-${attempt.$id}`;
@@ -970,7 +998,10 @@ export async function startVoicePracticeRound(
 		identity: actor.userId,
 		name: actor.name,
 	});
-	const updated = await updateAttemptRow(attempt.$id, { callId: roomName });
+	const updated = await updateAttemptRow(attempt.$id, {
+		callId: roomName,
+		dataResidencyRegion: residency,
+	});
 	await audit(
 		actor,
 		"create",
@@ -986,13 +1017,116 @@ export async function startVoicePracticeRound(
 }
 
 /** Marks consent captured, before the browser is allowed to connect to the room. */
-export async function recordVoiceConsent(attemptId: string) {
+export async function recordVoiceConsent(
+	attemptId: string,
+	options?: { audioAnonymized?: boolean },
+) {
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	let egressId: string | undefined;
+	try {
+		const egress = await startPracticeRoomEgress(roomName);
+		egressId = egress.egressId;
+	} catch (err) {
+		console.error("[SERVER] recordVoiceConsent:startPracticeRoomEgress", err);
+	}
 	const updated = await updateAttemptRow(attemptId, {
 		consentAt: new Date().toISOString(),
+		egressId,
+		audioAnonymized: options?.audioAnonymized ?? true,
 	});
 	return { attempt: updated };
+}
+
+/** Persist a finished LiveKit egress file into Appwrite and point recordingUrl at the gated route. */
+export async function ingestVoiceEgressRecording(info: EgressInfo) {
+	const roomName = info.roomName || "";
+	const attemptId = attemptIdFromRoomName(roomName);
+	if (!attemptId) return { error: "Unknown practice room." };
+	const attempt = await getAttemptUnscoped(attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const downloadUrl = egressFileDownloadUrl(info);
+	if (!downloadUrl) return { error: "No egress file URL yet." };
+	try {
+		const stored = await storePracticeRecordingFromUrl({
+			attemptId,
+			orgId: attempt.orgId,
+			downloadUrl,
+		});
+		const updated = await updateAttemptRow(attemptId, {
+			recordingFileId: stored.fileId,
+			recordingUrl: stored.recordingUrl,
+			egressId: info.egressId || attempt.egressId,
+		});
+		await logAuditEvent({
+			event_id: `audit_lab_practice_recording_${attempt.$id}`,
+			event_title: "Practice recording stored",
+			action: "create",
+			source: "caalm",
+			user_id: attempt.createdByUserId,
+			user_name: "",
+			user_email: "",
+			orgId: attempt.orgId,
+			status: "success",
+			module: "audit_lab",
+			target_type: "review_attempt",
+			target_id: attempt.$id,
+			target_label: attempt.sessionId,
+			summary: "Practice interview recording saved to CAALM storage",
+		}).catch(() => undefined);
+		return { attempt: updated };
+	} catch (err) {
+		console.error("[SERVER] ingestVoiceEgressRecording", err);
+		return { error: "Could not store the practice recording." };
+	}
+}
+
+export async function deleteVoicePracticeRecording(
+	actor: Actor,
+	attemptId: string,
+) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	if (attempt.recordingFileId) {
+		await deletePracticeRecordingFile(attempt.recordingFileId).catch(() => undefined);
+	}
+	const updated = await updateAttemptRow(attemptId, {
+		recordingFileId: "",
+		recordingUrl: "",
+	});
+	await audit(
+		actor,
+		"delete",
+		`Deleted practice recording for ${attempt.sessionId}`,
+		{ type: "review_attempt", id: attempt.$id, label: attempt.sessionId },
+	);
+	return { attempt: updated };
+}
+
+export async function auditPracticePiiReveal(
+	actor: Actor,
+	attemptId: string,
+) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	await logAuditEvent({
+		event_id: `audit_lab_practice_pii_reveal_${attempt.$id}_${Date.now()}`,
+		event_title: "Practice transcript PII revealed",
+		action: "view_pii",
+		source: "caalm",
+		user_id: actor.userId,
+		user_name: actor.name,
+		user_email: actor.email,
+		orgId: actor.orgId,
+		status: "success",
+		module: "audit_lab",
+		target_type: "review_attempt",
+		target_id: attempt.$id,
+		target_label: attempt.sessionId,
+		summary: "Viewed original (unredacted) practice transcript",
+	});
+	return { attempt };
 }
 
 /**
@@ -1006,6 +1140,7 @@ export async function recordVoiceTurn(
 		question: string;
 		answer: string;
 		citedEvidence?: string;
+		answerQuality?: "strong" | "adequate" | "weak";
 	},
 ) {
 	const attempt = await getAttemptUnscoped(attemptId);
@@ -1039,6 +1174,7 @@ export async function finalizeVoiceInterview(roomName: string) {
 	const scorecard = await gradeVoiceTranscript({ rubric, transcript }).catch(
 		() => null,
 	);
+	let practiceReadinessPct: number | undefined;
 	if (scorecard) {
 		await createReportRow({
 			orgId: attempt.orgId,
@@ -1047,8 +1183,16 @@ export async function finalizeVoiceInterview(roomName: string) {
 			bodyJson: JSON.stringify({ attemptId: attempt.$id, ...scorecard }),
 			createdByUserId: attempt.createdByUserId,
 		});
+		practiceReadinessPct = scorecardToPracticeReadinessPct(scorecard.items);
+		await updateSessionRow(attempt.sessionId, { practiceReadinessPct }).catch(
+			() => undefined,
+		);
 	}
-	const updated = await updateAttemptRow(attemptId, { status: "completed" });
+	const redacted = redactTranscriptTurns(transcript);
+	const updated = await updateAttemptRow(attemptId, {
+		status: "completed",
+		transcriptRedactedJson: JSON.stringify(redacted),
+	});
 	await logAuditEvent({
 		event_id: `audit_lab_voice_interview_complete_${attempt.$id}`,
 		event_title: `Voice interview completed for ${attempt.sessionId}`,
@@ -1063,8 +1207,29 @@ export async function finalizeVoiceInterview(roomName: string) {
 		target_type: "review_attempt",
 		target_id: attempt.$id,
 		target_label: attempt.sessionId,
-		summary: `Voice interview completed for ${attempt.sessionId}`,
+		summary:
+			typeof practiceReadinessPct === "number"
+				? `Voice interview completed; simulation readiness set to ${practiceReadinessPct}%`
+				: `Voice interview completed for ${attempt.sessionId}`,
 	}).catch(() => undefined);
+	if (typeof practiceReadinessPct === "number") {
+		await logAuditEvent({
+			event_id: `audit_lab_practice_readiness_${attempt.$id}`,
+			event_title: "Practice readiness updated",
+			action: "update",
+			source: "caalm",
+			user_id: attempt.createdByUserId,
+			user_name: "",
+			user_email: "",
+			orgId: attempt.orgId,
+			status: "success",
+			module: "audit_lab",
+			target_type: "review_session",
+			target_id: attempt.sessionId,
+			target_label: attempt.sessionId,
+			summary: `Practice readiness set to ${practiceReadinessPct}% from voice scorecard`,
+		}).catch(() => undefined);
+	}
 	return { attempt: updated };
 }
 

@@ -20,12 +20,19 @@ export async function POST(request: NextRequest) {
 			question?: string;
 			answer?: string;
 			citedEvidence?: string;
+			answerQuality?: "strong" | "adequate" | "weak";
 		};
+		const quality = body.answerQuality;
+		const answerQuality =
+			quality === "strong" || quality === "adequate" || quality === "weak"
+				? quality
+				: undefined;
 		const result = await recordVoiceTurn(String(body.attemptId ?? ""), {
 			questionId: String(body.questionId ?? ""),
 			question: String(body.question ?? ""),
 			answer: String(body.answer ?? ""),
 			citedEvidence: body.citedEvidence,
+			answerQuality,
 		});
 		if (result.error) {
 			return NextResponse.json({ error: result.error }, { status: 400 });

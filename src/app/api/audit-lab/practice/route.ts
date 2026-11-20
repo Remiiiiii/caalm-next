@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 			difficulty?: string;
 			retrievalMs?: number;
 			showMe?: boolean;
+			audioAnonymized?: boolean;
 		};
 		const action = String(body.action ?? "start");
 		if (action === "start_voice") {
@@ -50,7 +51,9 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ data: result });
 		}
 		if (action === "consent") {
-			const result = await recordVoiceConsent(String(body.attemptId ?? ""));
+			const result = await recordVoiceConsent(String(body.attemptId ?? ""), {
+				audioAnonymized: body.audioAnonymized !== false,
+			});
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });
 			}
