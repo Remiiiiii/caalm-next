@@ -704,6 +704,7 @@ export function VoiceInterviewPanel({
 							type="button"
 							variant="ghost"
 							className="voice-consent-btn-primary"
+							disabled={!consentChecked}
 							onClick={() => void confirmConsentAndConnect()}
 						>
 							Start recording
