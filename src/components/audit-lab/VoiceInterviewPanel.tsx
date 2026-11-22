@@ -12,6 +12,7 @@ import { Clapperboard, PhoneOff, User, Video } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatPracticeElapsed } from "@/components/audit-lab/PracticeChrome";
 import { PracticeInterviewSetup } from "@/components/audit-lab/PracticeInterviewSetup";
+import { ConsentCheckbox } from "@/components/audit-lab/voice/ConsentCheckbox";
 import { ControlBar } from "@/components/audit-lab/voice/ControlBar";
 import { RosterStrip } from "@/components/audit-lab/voice/RosterRow";
 import { RubricPanel } from "@/components/audit-lab/voice/RubricPanel";
@@ -112,6 +113,8 @@ export function VoiceInterviewPanel({
 	const [elapsed, setElapsed] = useState(0);
 	const [coverage, setCoverage] = useState<CoverageSnapshot | null>(null);
 	const [anonymizeAudio, setAnonymizeAudio] = useState(true);
+	// User must actively tick this; unlike voice anonymization it does not default on.
+	const [consentChecked, setConsentChecked] = useState(false);
 	const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 	const [participants, setParticipants] = useState<
 		ReviewSessionParticipantRow[]
@@ -450,6 +453,7 @@ export function VoiceInterviewPanel({
 			setMicOn(true);
 			setCamOn(true);
 			setInterviewStatus("live");
+			setConsentChecked(false);
 			pendingRef.current = {
 				roomName: data.roomName,
 				token: data.token,
@@ -667,21 +671,27 @@ export function VoiceInterviewPanel({
 					<DialogDescription className="text-[13px] leading-[1.55] text-[#9aa4b2]">
 						{`Starting turns on your camera and microphone, may show a talking-head interviewer, and stores the recording in CAALM for this organization. Live captions hide common personal details. Voice anonymization is${forceAnon ? " required for your role" : " on by default"}.`}
 					</DialogDescription>
-					{!forceAnon ? (
-						<label className="flex items-center gap-2 text-sm text-[#e2e8f0]">
-							<input
-								type="checkbox"
+					<div className="space-y-2.5">
+						<ConsentCheckbox
+							id="voice-consent-i-consent"
+							label="I consent"
+							checked={consentChecked}
+							onChange={setConsentChecked}
+						/>
+						{!forceAnon ? (
+							<ConsentCheckbox
+								id="voice-consent-anonymize"
+								label="Anonymize my voice during the call"
 								checked={anonymizeAudio}
-								onChange={(e) => setAnonymizeAudio(e.target.checked)}
+								onChange={setAnonymizeAudio}
 							/>
-							Anonymize my voice during the call
-						</label>
-					) : null}
+						) : null}
+					</div>
 					<div className="flex justify-end gap-2 pt-1">
 						<Button
 							type="button"
-							variant="outline"
-							className="border-white/15 bg-transparent text-[#e2e8f0] hover:bg-white/10"
+							variant="ghost"
+							className="voice-consent-btn-cancel"
 							onClick={() => {
 								pendingRef.current = null;
 								setAttemptId(null);
@@ -692,10 +702,11 @@ export function VoiceInterviewPanel({
 						</Button>
 						<Button
 							type="button"
-							className="btn-primary"
+							variant="ghost"
+							className="voice-consent-btn-primary"
 							onClick={() => void confirmConsentAndConnect()}
 						>
-							I consent — start recording
+							Start recording
 						</Button>
 					</div>
 				</DialogContent>

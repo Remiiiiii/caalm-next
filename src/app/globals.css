@@ -3334,3 +3334,111 @@ iframe[src*="splinecode"] {
 	background: rgba(7, 143, 171, 0.16) !important;
 	color: #e2e8f0 !important;
 }
+
+/**
+ * Consent-modal checkbox ("I consent" / "Anonymize my voice") and its two
+ * action buttons, per the finalized component spec: the checked checkbox
+ * and the primary button both adopt the window's "toolbar surface"
+ * (control-bar background) rather than a teal fill/gradient, and neither
+ * button nor checkbox has a hover state beyond a border lighten.
+ */
+.ckbox-row {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	cursor: pointer;
+}
+
+.ckbox-box-wrap {
+	position: relative;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
+}
+
+.ckbox-input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.ckbox-box {
+	position: absolute;
+	inset: 0;
+	width: 20px;
+	height: 20px;
+	border-radius: 6px;
+	border: 1.5px solid rgba(255, 255, 255, 0.24);
+	background: rgba(255, 255, 255, 0.04);
+	transition: border-color 150ms;
+}
+.ckbox-row:hover .ckbox-box {
+	border-color: rgba(255, 255, 255, 0.4);
+}
+
+.ckbox-box.checked {
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%),
+		rgba(18, 22, 29, 0.92);
+	border-color: rgba(255, 255, 255, 0.22);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.ckbox-row:hover .ckbox-box.checked {
+	border-color: rgba(255, 255, 255, 0.32);
+}
+
+/** Wrapping div for the checkmark SVG — centers a replaced element that `inset:0` alone can't stretch. */
+.ckbox-check {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #e2e8f0;
+}
+
+.ckbox-label {
+	font-size: 0.8125rem;
+	font-weight: 400;
+	color: #e2e8f0;
+}
+
+/** Consent modal's primary action — the window's toolbar surface, no teal, no hover effect. */
+.voice-consent-btn-primary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	border-radius: 9999px;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 55%),
+		rgba(18, 22, 29, 0.92);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	color: #e2e8f0;
+}
+.voice-consent-btn-primary:hover {
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 55%),
+		rgba(18, 22, 29, 0.92);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	color: #e2e8f0;
+}
+
+/** Consent modal's Cancel — unchanged ghost/outline look, hover effect removed. */
+.voice-consent-btn-cancel {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: #f2f3f5;
+}
+.voice-consent-btn-cancel:hover {
+	background: rgba(255, 255, 255, 0.05);
+	color: #f2f3f5;
+}
