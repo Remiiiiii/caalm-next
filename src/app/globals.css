@@ -3001,14 +3001,106 @@ iframe[src*="splinecode"] {
  * (Zoom-style) design language, separate from CAALM's light glass-card
  * system used everywhere else. Scoped entirely under these classes so it
  * never leaks into the rest of the app.
+ *
+ * Tokens below follow the Audit Lab "Live Interview Window" design system:
+ * near-monochrome dark surface, one reserved teal accent (#078fab / #6fe0f5)
+ * carrying meaning (status, progress, current emphasis), green/amber/red
+ * reserved for the three live-session statuses only. Poppins throughout.
  */
+@keyframes voiceCallOverlayIn {
+	from {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes voiceCallLiveDotPulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
 .voice-call-shell {
 	position: relative;
 	overflow: hidden;
 	border-radius: 1.25rem;
-	background: linear-gradient(160deg, #0b1220 0%, #0d1b2e 55%, #0a1220 100%);
-	color: #f1f5f9;
+	background:
+		radial-gradient(
+			ellipse 60% 45% at 82% 8%,
+			rgba(255, 255, 255, 0.06),
+			transparent 70%
+		),
+		linear-gradient(160deg, #171b22 0%, #0b0d11 72%);
+	color: #e2e8f0;
 	padding: 1rem;
+	animation: voiceCallOverlayIn 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-call-shell {
+		animation: none;
+	}
+}
+
+/** Scrim behind the live overlay / consent modal — dims the setup screen underneath. */
+.voice-call-scrim {
+	background: rgba(10, 16, 26, 0.6);
+	backdrop-filter: blur(14px) saturate(140%);
+	-webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+/** Consent modal panel — same dark surface language as the live window it leads into. */
+.voice-call-consent {
+	border-radius: 1rem;
+	background:
+		radial-gradient(
+			ellipse 60% 45% at 82% 8%,
+			rgba(255, 255, 255, 0.06),
+			transparent 70%
+		),
+		linear-gradient(160deg, #171b22 0%, #0b0d11 72%);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+	animation: voiceCallOverlayIn 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-call-consent {
+		animation: none;
+	}
+}
+
+/** Live status pill (dot + "Live — 1:00"). Dot carries the status color; label text stays primary gray. */
+.voice-call-live-dot {
+	height: 0.5rem;
+	width: 0.5rem;
+	border-radius: 9999px;
+	background: #22c55e;
+	animation: voiceCallLiveDotPulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-call-live-dot {
+		animation: none;
+	}
+}
+.voice-call-live-dot.voice-call-live-dot-paused {
+	background: #f9ab72;
+	animation: none;
+}
+.voice-call-live-status {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #e2e8f0;
+}
+.voice-call-live-status.voice-call-live-status-paused {
+	color: #f9ab72;
 }
 
 .voice-call-badge {
@@ -3018,17 +3110,19 @@ iframe[src*="splinecode"] {
 	background: rgba(255, 255, 255, 0.08);
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	padding: 0.125rem 0.625rem;
-	font-size: 0.6875rem;
+	font-size: 0.71875rem;
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.75);
+	color: #cbd5e1;
 }
 
 .voice-call-stage {
 	position: relative;
 	overflow: hidden;
-	border-radius: 0.75rem;
-	background: #000;
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 0.875rem;
+	background: #0a0d12;
+	box-shadow:
+		inset 0 0 140px rgba(0, 0, 0, 0.45),
+		0 0 90px rgba(7, 143, 171, 0.16);
 }
 
 .voice-call-nameplate {
@@ -3036,13 +3130,13 @@ iframe[src*="splinecode"] {
 	top: 0.75rem;
 	left: 0.75rem;
 	border-radius: 9999px;
-	background: rgba(15, 23, 42, 0.65);
+	background: rgba(10, 13, 18, 0.68);
 	backdrop-filter: blur(6px);
 	-webkit-backdrop-filter: blur(6px);
 	padding: 0.25rem 0.75rem;
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: #fff;
+	color: #e2e8f0;
 }
 
 .voice-call-caption {
@@ -3050,8 +3144,8 @@ iframe[src*="splinecode"] {
 	bottom: 0.75rem;
 	left: 0.75rem;
 	right: 7.5rem;
-	font-size: 0.8125rem;
-	color: rgba(255, 255, 255, 0.85);
+	font-size: 0.78125rem;
+	color: #e2e8f0;
 }
 
 .voice-call-pip {
@@ -3062,33 +3156,51 @@ iframe[src*="splinecode"] {
 	height: 5.5rem;
 	overflow: hidden;
 	border-radius: 0.5rem;
-	border: 1px solid rgba(255, 255, 255, 0.15);
-	background: #000;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: #0a0d12;
 }
 
 .voice-call-panel {
-	border-radius: 0.75rem;
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 0.875rem;
+	background: #1a202b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	padding: 0.75rem;
 }
 
 .voice-call-panel-title {
-	font-size: 0.6875rem;
-	font-weight: 700;
-	letter-spacing: 0.04em;
+	font-size: 0.65625rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.45);
+	color: #7c8798;
+}
+
+.voice-call-footnote {
+	font-size: 0.71875rem;
+	font-weight: 400;
+	color: #9aa4b2;
+}
+
+.voice-call-speaker-name {
+	font-size: 0.625rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #7c8798;
+}
+.voice-call-speaker-name.voice-call-speaker-name-ai {
+	color: #6fe0f5;
 }
 
 .voice-call-bubble-auditor {
 	display: inline-block;
 	border-radius: 0.5rem;
-	background: rgba(7, 143, 171, 0.25);
-	border: 1px solid rgba(7, 143, 171, 0.4);
-	color: #e2f6fb;
+	background: rgba(7, 143, 171, 0.18);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
 	padding: 0.375rem 0.625rem;
-	font-size: 0.8125rem;
+	font-size: 0.78125rem;
+	font-weight: 400;
 }
 
 .voice-call-bubble-interviewee {
@@ -3096,9 +3208,11 @@ iframe[src*="splinecode"] {
 	margin-left: auto;
 	border-radius: 0.5rem;
 	background: rgba(255, 255, 255, 0.08);
-	color: rgba(255, 255, 255, 0.9);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	color: #e2e8f0;
 	padding: 0.375rem 0.625rem;
-	font-size: 0.8125rem;
+	font-size: 0.78125rem;
+	font-weight: 400;
 }
 
 .voice-call-roster-card {
@@ -3107,10 +3221,38 @@ iframe[src*="splinecode"] {
 	align-items: center;
 	gap: 0.375rem;
 	min-width: 5.5rem;
-	border-radius: 0.75rem;
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 0.875rem;
+	background: #1a202b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	padding: 0.625rem 0.5rem;
+}
+
+.voice-call-roster-name {
+	font-size: 0.6875rem;
+	font-weight: 600;
+	color: #e2e8f0;
+}
+
+.voice-call-role-pill {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.08);
+	padding: 0.0625rem 0.5rem;
+	font-size: 0.59375rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #7c8798;
+}
+.voice-call-role-pill.voice-call-role-pill-facilitator {
+	color: #f9ab72;
+}
+.voice-call-role-pill.voice-call-role-pill-interviewee {
+	color: #6fe0f5;
+}
+.voice-call-role-pill.voice-call-role-pill-mock_auditor {
+	color: #078fab;
 }
 
 .voice-call-control-bar {
@@ -3118,10 +3260,13 @@ iframe[src*="splinecode"] {
 	align-items: center;
 	gap: 0.5rem;
 	border-radius: 9999px;
-	background: rgba(15, 23, 42, 0.85);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 55%),
+		rgba(18, 22, 29, 0.92);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 	padding: 0.5rem 0.75rem;
 }
 
@@ -3132,7 +3277,7 @@ iframe[src*="splinecode"] {
 	height: 2.25rem;
 	width: 2.25rem;
 	border-radius: 9999px;
-	color: rgba(255, 255, 255, 0.85);
+	color: #e2e8f0;
 	background: transparent;
 	transition: background-color 150ms;
 }
@@ -3141,12 +3286,51 @@ iframe[src*="splinecode"] {
 }
 .voice-call-control-btn[aria-pressed="true"],
 .voice-call-control-btn.voice-call-control-btn-active {
-	background: rgba(7, 143, 171, 0.3);
-	color: #7fe3ff;
+	background: rgba(7, 143, 171, 0.22);
+	color: #6fe0f5;
 }
 .voice-call-control-btn.voice-call-control-btn-danger {
-	color: #fca5a5;
+	color: #ef7a6d;
 }
 .voice-call-control-btn.voice-call-control-btn-danger:hover {
-	background: rgba(239, 68, 68, 0.15);
+	background: rgba(239, 122, 109, 0.15);
+}
+
+/** Dark pill trigger buttons in the control bar that carry a label (Participants count, Session details). */
+.voice-call-control-chip-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	height: 2.25rem;
+	border-radius: 9999px;
+	padding: 0 0.75rem;
+	color: #e2e8f0;
+	background: transparent;
+	font-size: 0.78125rem;
+	font-weight: 500;
+	transition: background-color 150ms;
+}
+.voice-call-control-chip-btn:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/** Dark surface popovers/dropdowns opened from the control bar (Participants, Session details, More). */
+.voice-call-popover {
+	border-radius: 0.875rem;
+	background: #1a202b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.voice-call-menu-item {
+	border-radius: 0.5rem;
+	font-size: 0.78125rem;
+	font-weight: 500;
+	color: #e2e8f0;
+}
+.voice-call-menu-item:focus,
+.voice-call-menu-item[data-highlighted] {
+	background: rgba(7, 143, 171, 0.16) !important;
+	color: #e2e8f0 !important;
 }

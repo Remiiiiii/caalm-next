@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 export type TranscriptTurn = {
 	$id?: string;
@@ -31,13 +32,17 @@ export function TranscriptPanel({
 			className="max-h-56 space-y-2 overflow-y-auto review-hover-scroll pr-1"
 		>
 			{turns.length === 0 && !liveCaption ? (
-				<p className="text-sm text-white/50">Listening…</p>
+				<p className="voice-call-footnote">Listening…</p>
 			) : null}
 			{turns.map((turn, idx) => (
 				<div key={turn.$id ?? idx} className="space-y-1">
 					{turn.question ? (
 						<div>
-							<p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#7fe3ff]/80">
+							<p
+								className={cn(
+									"voice-call-speaker-name voice-call-speaker-name-ai mb-0.5",
+								)}
+							>
 								{auditorLabel}
 							</p>
 							<p className="voice-call-bubble-auditor">{turn.question}</p>
@@ -45,9 +50,7 @@ export function TranscriptPanel({
 					) : null}
 					{turn.answer ? (
 						<div className="flex flex-col items-end text-right">
-							<p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">
-								You
-							</p>
+							<p className="voice-call-speaker-name mb-0.5">You</p>
 							<p className="voice-call-bubble-interviewee">{turn.answer}</p>
 						</div>
 					) : null}
@@ -55,7 +58,7 @@ export function TranscriptPanel({
 			))}
 			{liveCaption ? (
 				<div>
-					<p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#7fe3ff]/80">
+					<p className="voice-call-speaker-name voice-call-speaker-name-ai mb-0.5">
 						{auditorLabel}
 					</p>
 					<p className="voice-call-bubble-auditor italic opacity-80">

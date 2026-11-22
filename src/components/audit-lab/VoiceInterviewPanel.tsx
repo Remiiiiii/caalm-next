@@ -19,8 +19,13 @@ import {
 	TranscriptPanel,
 	type TranscriptTurn,
 } from "@/components/audit-lab/voice/TranscriptPanel";
-import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -637,7 +642,7 @@ export function VoiceInterviewPanel({
 				/>
 			) : null}
 
-			<AppDialog
+			<Dialog
 				open={phase === "consent"}
 				onOpenChange={(open) => {
 					if (open) return;
@@ -645,14 +650,38 @@ export function VoiceInterviewPanel({
 					setAttemptId(null);
 					setPhase("idle");
 				}}
-				icon={<Video className="h-[17px] w-[17px]" aria-hidden />}
-				title="This session will be recorded"
-				description={`Starting turns on your camera and microphone, may show a talking-head interviewer, and stores the recording in CAALM for this organization. Live captions hide common personal details. Voice anonymization is${forceAnon ? " required for your role" : " on by default"}.`}
-				footer={
-					<>
+			>
+				<DialogContent
+					className="voice-call-consent max-w-[460px] gap-4 p-6 sm:rounded-2xl"
+					overlayClassName="voice-call-scrim"
+					closeButtonClassName="text-white/50 hover:bg-white/10 hover:text-white/80"
+				>
+					<div className="flex items-center gap-2.5">
+						<div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] border border-[#078fab]/30 bg-[#078fab]/15 text-[#6fe0f5]">
+							<Video className="h-[17px] w-[17px]" aria-hidden />
+						</div>
+						<DialogTitle className="text-sm font-semibold text-[#e2e8f0]">
+							This session will be recorded
+						</DialogTitle>
+					</div>
+					<DialogDescription className="text-[13px] leading-[1.55] text-[#9aa4b2]">
+						{`Starting turns on your camera and microphone, may show a talking-head interviewer, and stores the recording in CAALM for this organization. Live captions hide common personal details. Voice anonymization is${forceAnon ? " required for your role" : " on by default"}.`}
+					</DialogDescription>
+					{!forceAnon ? (
+						<label className="flex items-center gap-2 text-sm text-[#e2e8f0]">
+							<input
+								type="checkbox"
+								checked={anonymizeAudio}
+								onChange={(e) => setAnonymizeAudio(e.target.checked)}
+							/>
+							Anonymize my voice during the call
+						</label>
+					) : null}
+					<div className="flex justify-end gap-2 pt-1">
 						<Button
 							type="button"
 							variant="outline"
+							className="border-white/15 bg-transparent text-[#e2e8f0] hover:bg-white/10"
 							onClick={() => {
 								pendingRef.current = null;
 								setAttemptId(null);
@@ -668,20 +697,9 @@ export function VoiceInterviewPanel({
 						>
 							I consent — start recording
 						</Button>
-					</>
-				}
-			>
-				{!forceAnon ? (
-					<label className="flex items-center gap-2 text-sm text-slate-700">
-						<input
-							type="checkbox"
-							checked={anonymizeAudio}
-							onChange={(e) => setAnonymizeAudio(e.target.checked)}
-						/>
-						Anonymize my voice during the call
-					</label>
-				) : null}
-			</AppDialog>
+					</div>
+				</DialogContent>
+			</Dialog>
 
 			{phase === "connecting" ? (
 				<p className="text-sm text-slate-500">Connecting…</p>
@@ -690,14 +708,28 @@ export function VoiceInterviewPanel({
 			{phase === "live" ? (
 				<div className="voice-call-shell">
 					<div className="mb-3 flex items-center justify-between">
-						<span className="flex items-center gap-1.5 text-xs font-semibold text-green-400">
-							<span className="h-2 w-2 rounded-full bg-green-400" aria-hidden />
-							Live — {formatPracticeElapsed(elapsed)}
+						<span
+							className={cn(
+								"voice-call-live-status flex items-center gap-1.5",
+								interviewStatus === "paused" &&
+									"voice-call-live-status-paused",
+							)}
+						>
+							<span
+								className={cn(
+									"voice-call-live-dot",
+									interviewStatus === "paused" &&
+										"voice-call-live-dot-paused",
+								)}
+								aria-hidden
+							/>
+							{interviewStatus === "paused" ? "Paused" : "Live"} —{" "}
+							{formatPracticeElapsed(elapsed)}
 						</span>
 						<Button
 							type="button"
 							variant="outline"
-							className="border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+							className="border-[#ef7a6d]/30 bg-[#ef7a6d]/10 text-[#ef7a6d] hover:bg-[#ef7a6d]/20"
 							onClick={() => void endOrLeave()}
 						>
 							<PhoneOff className="h-4 w-4" aria-hidden />
@@ -735,7 +767,7 @@ export function VoiceInterviewPanel({
 								muted
 							/>
 							{!hasRemoteVideo ? (
-								<div className="flex h-full flex-col items-center justify-center gap-2 text-white/60">
+								<div className="flex h-full flex-col items-center justify-center gap-2 text-[#7c8798]">
 									<span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
 										<User className="h-7 w-7" aria-hidden />
 									</span>
@@ -756,7 +788,7 @@ export function VoiceInterviewPanel({
 									playsInline
 									muted
 								/>
-								<span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+								<span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide text-[#e2e8f0]/80">
 									You
 								</span>
 							</div>
@@ -772,7 +804,7 @@ export function VoiceInterviewPanel({
 										auditorLabel={`Mock auditor · ${INTERVIEWER_PROFILES[persona].name}`}
 									/>
 								) : (
-									<p className="text-sm text-white/40">Transcript hidden.</p>
+									<p className="voice-call-footnote">Transcript hidden.</p>
 								)}
 							</div>
 							<div className="voice-call-panel">
@@ -783,21 +815,21 @@ export function VoiceInterviewPanel({
 					</div>
 
 					{interviewStatus === "paused" ? (
-						<p className="mt-3 rounded-md bg-orange-500/15 px-3 py-2 text-sm font-medium text-orange-200">
+						<p className="mt-3 rounded-md bg-[#f9ab72]/15 px-3 py-2 text-sm font-medium text-[#f9ab72]">
 							Interview paused by the facilitator.
 						</p>
 					) : null}
 
 					{showReconsent ? (
-						<div className="mt-3 space-y-3 rounded-lg border border-orange-400/30 bg-orange-500/10 p-4">
-							<p className="text-sm font-semibold text-white">
+						<div className="mt-3 space-y-3 rounded-[0.875rem] border border-[#f9ab72]/30 bg-[#f9ab72]/10 p-4">
+							<p className="text-sm font-semibold text-[#e2e8f0]">
 								Confirm voice anonymization change
 							</p>
-							<p className="text-sm text-white/70">
+							<p className="voice-call-footnote">
 								Changing this mid-call needs a fresh confirmation before it takes
 								effect.
 							</p>
-							<label className="flex items-center gap-2 text-sm text-white/80">
+							<label className="flex items-center gap-2 text-sm text-[#e2e8f0]">
 								<input
 									type="checkbox"
 									checked={pendingAnonymize}
@@ -816,6 +848,7 @@ export function VoiceInterviewPanel({
 								<Button
 									type="button"
 									variant="outline"
+									className="border-white/15 bg-transparent text-[#e2e8f0] hover:bg-white/10"
 									onClick={() => setShowReconsent(false)}
 								>
 									Cancel

@@ -13,7 +13,7 @@ export function RubricPanel({
 
 	if (totalCount === 0) {
 		return (
-			<p className="text-xs text-white/50">
+			<p className="voice-call-footnote">
 				Waiting for rubric coverage from the interviewer…
 			</p>
 		);
@@ -21,9 +21,9 @@ export function RubricPanel({
 
 	return (
 		<div className="space-y-2">
-			<div className="flex items-center justify-between text-xs font-semibold text-white/70">
+			<div className="flex items-center justify-between text-xs font-semibold text-[#7c8798]">
 				<span>Rubric coverage</span>
-				<span className="tabular-nums text-white/50">
+				<span className="tabular-nums text-[#7c8798]">
 					{coveredCount}/{totalCount}
 				</span>
 			</div>
@@ -40,30 +40,32 @@ export function RubricPanel({
 					<li
 						key={item.questionId}
 						className={cn(
-							"flex items-start gap-2 rounded-md px-2 py-1.5 text-sm",
-							item.status === "current" && "bg-[#078fab]/15",
-							item.status === "covered" && "text-white/40",
+							"flex items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px]",
+							item.status === "current" &&
+								"bg-[#078fab]/10 ring-1 ring-inset ring-[#078fab]/40",
 						)}
 					>
 						{item.status === "covered" ? (
 							<Check
-								className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400"
+								className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#22c55e]"
 								aria-hidden
 							/>
 						) : (
 							<Circle
 								className={cn(
 									"mt-0.5 h-3.5 w-3.5 shrink-0",
-									item.status === "current" ? "text-[#7fe3ff]" : "text-white/30",
+									item.status === "current"
+										? "text-[#078fab]"
+										: "text-white/25",
 								)}
 								aria-hidden
 							/>
 						)}
 						<span
 							className={cn(
-								"text-white/80",
-								item.status === "current" && "font-medium text-white",
-								item.status === "covered" && "line-through",
+								item.status === "current" && "font-medium text-[#e2e8f0]",
+								item.status === "remaining" && "text-[#aab2c0]",
+								item.status === "covered" && "text-[#5d6675] line-through",
 							)}
 						>
 							{item.prompt}

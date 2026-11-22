@@ -38,17 +38,20 @@ export function MoreMenu({
 			<DropdownMenuTrigger asChild>
 				<button
 					type="button"
-					className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white/80 text-slate-600 hover:bg-white"
+					className="voice-call-control-btn"
 					aria-label="More options"
 				>
 					<MoreHorizontal className="h-4 w-4" aria-hidden />
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-64">
+			<DropdownMenuContent
+				align="end"
+				className="voice-call-popover w-64 border-none p-1.5 backdrop-blur-none"
+			>
 				{isFacilitator ? (
 					<>
 						<DropdownMenuItem
-							className="gap-2"
+							className="voice-call-menu-item gap-2"
 							onSelect={() => onTogglePause()}
 						>
 							{isPaused ? (
@@ -58,22 +61,25 @@ export function MoreMenu({
 							)}
 							{isPaused ? "Resume interview" : "Pause interview"}
 						</DropdownMenuItem>
-						<DropdownMenuSeparator />
+						<DropdownMenuSeparator className="bg-white/10" />
 					</>
 				) : null}
-				<DropdownMenuItem className="gap-2" onSelect={() => onToggleCaptions()}>
+				<DropdownMenuItem
+					className="voice-call-menu-item gap-2"
+					onSelect={() => onToggleCaptions()}
+				>
 					<Captions className="h-4 w-4" aria-hidden />
 					{captionsOn ? "Hide live captions" : "Show live captions"}
 				</DropdownMenuItem>
 				<DropdownMenuItem
-					className="gap-2"
+					className="voice-call-menu-item gap-2"
 					onSelect={() => onToggleVoiceAnon()}
 				>
 					<ShieldHalf className="h-4 w-4" aria-hidden />
 					{voiceAnonOn ? "Turn off voice anonymization" : "Anonymize my voice"}
 				</DropdownMenuItem>
 				<DropdownMenuItem
-					className="gap-2"
+					className="voice-call-menu-item gap-2"
 					onSelect={() => onDownloadTranscript()}
 				>
 					<Download className="h-4 w-4" aria-hidden />

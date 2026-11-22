@@ -21,40 +21,41 @@ export function SessionDetailsPopover({
 			<PopoverTrigger asChild>
 				<button
 					type="button"
-					className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white/80 text-slate-600 hover:bg-white"
+					className="voice-call-control-btn"
 					aria-label="Session details"
 				>
 					<Info className="h-4 w-4" aria-hidden />
 				</button>
 			</PopoverTrigger>
-			<PopoverContent align="end" className="w-72 space-y-2 text-sm">
-				<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-					Session details
-				</p>
+			<PopoverContent
+				align="end"
+				className="voice-call-popover w-72 space-y-2 border-none p-4 text-sm backdrop-blur-none"
+			>
+				<p className="voice-call-panel-title">Session details</p>
 				<dl className="space-y-1.5">
 					<div className="flex justify-between gap-3">
-						<dt className="text-slate-500">Title</dt>
-						<dd className="text-right font-medium text-slate-800">{title}</dd>
+						<dt className="text-[#7c8798]">Title</dt>
+						<dd className="text-right font-medium text-[#e2e8f0]">{title}</dd>
 					</div>
 					{department ? (
 						<div className="flex justify-between gap-3">
-							<dt className="text-slate-500">Department</dt>
-							<dd className="text-right font-medium text-slate-800">
+							<dt className="text-[#7c8798]">Department</dt>
+							<dd className="text-right font-medium text-[#e2e8f0]">
 								{department}
 							</dd>
 						</div>
 					) : null}
 					{framework ? (
 						<div className="flex justify-between gap-3">
-							<dt className="text-slate-500">Framework</dt>
-							<dd className="text-right font-medium text-slate-800">
+							<dt className="text-[#7c8798]">Framework</dt>
+							<dd className="text-right font-medium text-[#e2e8f0]">
 								{framework}
 							</dd>
 						</div>
 					) : null}
 					<div className="flex justify-between gap-3">
-						<dt className="text-slate-500">Interviewer</dt>
-						<dd className="text-right font-medium text-slate-800">
+						<dt className="text-[#7c8798]">Interviewer</dt>
+						<dd className="text-right font-medium text-[#e2e8f0]">
 							{personaLabel}
 						</dd>
 					</div>

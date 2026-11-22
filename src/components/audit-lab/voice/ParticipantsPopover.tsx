@@ -20,21 +20,22 @@ export function ParticipantsPopover({
 			<PopoverTrigger asChild>
 				<button
 					type="button"
-					className="flex h-9 items-center gap-1.5 rounded-md border border-slate-200 bg-white/80 px-3 text-sm font-medium text-slate-700 hover:bg-white"
+					className="voice-call-control-chip-btn"
 					aria-label="Participants"
 				>
 					<Users className="h-4 w-4" aria-hidden />
 					{joinedCount}
 				</button>
 			</PopoverTrigger>
-			<PopoverContent align="end" className="w-80">
-				<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-					Participants
-				</p>
+			<PopoverContent
+				align="end"
+				className="voice-call-popover w-80 border-none p-4 backdrop-blur-none"
+			>
+				<p className="voice-call-panel-title mb-2">Participants</p>
 				{participants.length === 0 ? (
-					<p className="text-sm text-slate-500">No one else has joined yet.</p>
+					<p className="voice-call-footnote">No one else has joined yet.</p>
 				) : (
-					<div className="max-h-64 divide-y divide-slate-100 overflow-y-auto">
+					<div className="max-h-64 divide-y divide-white/10 overflow-y-auto">
 						{participants.map((p) => (
 							<RosterRow key={p.$id} participant={p} />
 						))}
