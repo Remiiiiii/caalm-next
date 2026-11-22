@@ -1,9 +1,11 @@
 import type { EgressInfo } from "livekit-server-sdk";
+import { Permission, Role } from "node-appwrite";
 import { listFindings } from "@/lib/audit-upload/store";
 import {
 	createParticipantToken,
 	createVoiceInterviewRoom,
 	livekitBrowserUrl,
+	roomServiceClient,
 } from "@/lib/livekit/client";
 import {
 	attemptIdFromRoomName,
@@ -11,6 +13,7 @@ import {
 	startPracticeRoomEgress,
 } from "@/lib/livekit/egress";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { isSessionFacilitator } from "./access";
 import {
 	markSessionCalendarEventCancelled,
 	syncPrepDeadlineCalendarEvent,
@@ -30,21 +33,27 @@ import {
 	createAttemptRow,
 	createEvidenceRow,
 	createGapRow,
+	createParticipantRow,
 	createQuestionRow,
 	createReportRow,
 	createScriptRow,
 	createSessionRow,
+	createTranscriptTurnRow,
+	findParticipantRow,
 	getAttempt,
 	getAttemptUnscoped,
 	getEvidence,
 	getSession,
 	listEvidence,
 	listGaps,
+	listParticipantRows,
 	listQuestions,
 	listScripts,
 	listSessions,
+	listTranscriptTurnRows,
 	updateAttemptRow,
 	updateEvidenceRow,
+	updateParticipantRow,
 	updateSessionRow,
 } from "./repository";
 import { followUpForVagueAnswer } from "./roleplay";
@@ -63,6 +72,8 @@ import {
 	EVIDENCE_STATUSES,
 	type EvidenceStatus,
 	parseParticipants,
+	type ReviewAttempt,
+	type ReviewSession,
 	SESSION_ROLES,
 	type SessionParticipant,
 	type SessionRole,
@@ -977,7 +988,7 @@ export async function startVoicePracticeRound(
 		difficulty: "voice",
 		transcriptJson: JSON.stringify([]),
 		scoresJson: JSON.stringify([]),
-		status: "in_progress",
+		status: "awaiting_consent",
 		dataResidencyRegion: residency,
 		createdByUserId: actor.userId,
 	});
@@ -1035,6 +1046,7 @@ export async function recordVoiceConsent(
 		consentAt: new Date().toISOString(),
 		egressId,
 		audioAnonymized: options?.audioAnonymized ?? true,
+		status: "live",
 	});
 	return { attempt: updated };
 }
@@ -1132,6 +1144,9 @@ export async function auditPracticePiiReveal(
 /**
  * Called by the voice-agent worker (shared-secret auth, no user session) after
  * every answered question, so a dropped call never loses transcript so far.
+ * Persists one row per turn (`review_transcript_turns`) rather than appending
+ * to the attempt's JSON blob, so Appwrite Realtime can push just the new row
+ * instead of re-sending the whole growing transcript on every turn.
  */
 export async function recordVoiceTurn(
 	attemptId: string,
@@ -1145,12 +1160,226 @@ export async function recordVoiceTurn(
 ) {
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
-	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
-	transcript.push({ ...turn, at: new Date().toISOString() });
+	const roster = await listParticipantRows(attempt.orgId, attemptId);
+	const permissions = roster.flatMap((p) => [
+		Permission.read(Role.user(p.userId)),
+		Permission.update(Role.user(p.userId)),
+	]);
+	await createTranscriptTurnRow(
+		{
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			questionId: turn.questionId,
+			question: turn.question,
+			answer: turn.answer,
+			citedEvidence: turn.citedEvidence,
+			answerQuality: turn.answerQuality,
+			at: new Date().toISOString(),
+			redacted: false,
+		},
+		permissions.length > 0 ? permissions : undefined,
+	);
+	const updated = await updateAttemptRow(attemptId, { currentQuestionId: "" });
+	return { attempt: updated };
+}
+
+/** Called by the worker right before it asks a rubric question, so refresh/other clients know what's "current." */
+export async function setCurrentRubricQuestion(
+	attemptId: string,
+	questionId: string | null,
+) {
 	const updated = await updateAttemptRow(attemptId, {
-		transcriptJson: JSON.stringify(transcript),
+		currentQuestionId: questionId ?? "",
 	});
 	return { attempt: updated };
+}
+
+/** Reads the durable transcript for an attempt, falling back to the legacy JSON blob for attempts recorded before `review_transcript_turns` existed. */
+export async function listTranscriptTurns(
+	orgId: string,
+	attemptId: string,
+): Promise<Array<{ questionId: string; question: string; answer: string }>> {
+	const rows = await listTranscriptTurnRows(orgId, attemptId);
+	if (rows.length > 0) {
+		return rows.map((row) => ({
+			questionId: row.questionId ?? "",
+			question: row.question ?? "",
+			answer: row.answer ?? "",
+		}));
+	}
+	const attempt = await getAttemptUnscoped(attemptId);
+	return JSON.parse(attempt?.transcriptJson || "[]");
+}
+
+/** Resolves this attempt's facilitator userId: whoever the session's invite list tags `facilitator`, falling back to the attempt's creator if no one has been explicitly assigned. */
+function resolveFacilitatorUserId(
+	session: ReviewSession | null,
+	attempt: ReviewAttempt,
+): string {
+	const participants = parseParticipants(session?.participantsJson);
+	const facilitator = participants.find((p) => p.role === "facilitator");
+	return facilitator?.userId ?? attempt.createdByUserId;
+}
+
+/** Facilitator-only guard shared by `pauseVoiceInterview`/`resumeVoiceInterview`/`endSessionAsFacilitator`. */
+function requireFacilitator(
+	actor: Actor,
+	session: ReviewSession | null,
+	attempt: ReviewAttempt,
+): { error: string } | null {
+	const participants = parseParticipants(session?.participantsJson);
+	if (
+		!isSessionFacilitator(participants, actor.userId, attempt.createdByUserId)
+	) {
+		return { error: "Only the facilitator can do that." };
+	}
+	return null;
+}
+
+/** Looks up a joiner's invited role from the session's invite list; anyone not explicitly tagged joins as an interviewee. */
+function resolveInviteRole(
+	session: ReviewSession | null,
+	userId: string,
+): SessionRole {
+	const participants = parseParticipants(session?.participantsJson);
+	return participants.find((p) => p.userId === userId)?.role ?? "interviewee";
+}
+
+/** Upserts a live roster row when a participant's browser connects to the room. */
+export async function joinSessionAsParticipant(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const facilitatorUserId = resolveFacilitatorUserId(session, attempt);
+	const now = new Date().toISOString();
+
+	const existing = await findParticipantRow(attemptId, actor.userId);
+	if (existing) {
+		const updated = await updateParticipantRow(existing.$id, {
+			connectionState: "joined",
+			joinedAt: now,
+			leftAt: "",
+		});
+		return { participant: updated };
+	}
+
+	const permissions = [
+		Permission.read(Role.user(actor.userId)),
+		Permission.update(Role.user(actor.userId)),
+		Permission.read(Role.user(facilitatorUserId)),
+		Permission.update(Role.user(facilitatorUserId)),
+	];
+	const created = await createParticipantRow(
+		{
+			orgId: actor.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			userId: actor.userId,
+			name: actor.name,
+			email: actor.email,
+			role: resolveInviteRole(session, actor.userId),
+			connectionState: "joined",
+			joinedAt: now,
+		},
+		permissions,
+	);
+	return { participant: created };
+}
+
+/** Marks a roster row left when a participant disconnects — doesn't end the session for anyone else. */
+export async function leaveSessionAsParticipant(
+	actor: Actor,
+	attemptId: string,
+) {
+	const existing = await findParticipantRow(attemptId, actor.userId);
+	if (!existing) return { error: "I couldn't find that roster entry." };
+	const updated = await updateParticipantRow(existing.$id, {
+		connectionState: "left",
+		leftAt: new Date().toISOString(),
+	});
+	return { participant: updated };
+}
+
+/** Mirrors local mic/cam toggle state into the roster row so other clients' Participants popover reflects it. */
+export async function setParticipantAvState(
+	actor: Actor,
+	attemptId: string,
+	state: { micOn?: boolean; camOn?: boolean },
+) {
+	const existing = await findParticipantRow(attemptId, actor.userId);
+	if (!existing) return { error: "I couldn't find that roster entry." };
+	const updated = await updateParticipantRow(existing.$id, state);
+	return { participant: updated };
+}
+
+export async function listSessionParticipants(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const participants = await listParticipantRows(actor.orgId, attemptId);
+	return { participants };
+}
+
+/** Facilitator-only. Flips status to `paused`, stamps `pausedAt`, and tells the worker via room metadata so it stops advancing the interview. */
+export async function pauseVoiceInterview(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const denied = requireFacilitator(actor, session, attempt);
+	if (denied) return denied;
+	if (attempt.status !== "live") return { attempt };
+	const updated = await updateAttemptRow(attemptId, {
+		status: "paused",
+		pausedAt: new Date().toISOString(),
+	});
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	await roomServiceClient()
+		.updateRoomMetadata(roomName, JSON.stringify({ paused: true }))
+		.catch((err) =>
+			console.error("[SERVER] pauseVoiceInterview:updateRoomMetadata", err),
+		);
+	return { attempt: updated };
+}
+
+/** Facilitator-only. Resumes a paused interview, clearing `pausedAt` and telling the worker it can keep going. */
+export async function resumeVoiceInterview(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const denied = requireFacilitator(actor, session, attempt);
+	if (denied) return denied;
+	if (attempt.status !== "paused") return { attempt };
+	const updated = await updateAttemptRow(attemptId, {
+		status: "live",
+		pausedAt: "",
+	});
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	await roomServiceClient()
+		.updateRoomMetadata(roomName, JSON.stringify({ paused: false }))
+		.catch((err) =>
+			console.error("[SERVER] resumeVoiceInterview:updateRoomMetadata", err),
+		);
+	return { attempt: updated };
+}
+
+/**
+ * Facilitator-only. Ends a live/paused interview for everyone, disconnecting
+ * all room participants; the existing `room_finished` webhook (`finalizeVoiceInterview`)
+ * still does the actual grading once LiveKit reports the room closed.
+ */
+export async function endVoiceInterview(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const denied = requireFacilitator(actor, session, attempt);
+	if (denied) return denied;
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	await roomServiceClient()
+		.deleteRoom(roomName)
+		.catch((err) =>
+			console.error("[SERVER] endVoiceInterview:deleteRoom", err),
+		);
+	return { attempt };
 }
 
 /**
@@ -1165,11 +1394,7 @@ export async function finalizeVoiceInterview(roomName: string) {
 
 	const questions = await listQuestions(attempt.orgId, attempt.sessionId);
 	const rubric = buildVoiceRubric(questions);
-	const transcript = JSON.parse(attempt.transcriptJson || "[]") as Array<{
-		questionId: string;
-		question: string;
-		answer: string;
-	}>;
+	const transcript = await listTranscriptTurns(attempt.orgId, attemptId);
 
 	const scorecard = await gradeVoiceTranscript({ rubric, transcript }).catch(
 		() => null,

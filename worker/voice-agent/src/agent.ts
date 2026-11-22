@@ -4,6 +4,7 @@ import * as deepgram from "@livekit/agents-plugin-deepgram";
 import * as elevenlabs from "@livekit/agents-plugin-elevenlabs";
 import * as silero from "@livekit/agents-plugin-silero";
 import * as synthesia from "@livekit/agents-plugin-synthesia";
+import { RoomEvent } from "@livekit/rtc-node";
 import { config as loadEnv } from "dotenv";
 import {
 	buildCoverageSnapshot,
@@ -74,13 +75,27 @@ export default defineAgent({
 		};
 
 		const firstId = metadata.rubric[0]?.questionId ?? null;
+
+		/** Room metadata is how the main app's pause/resume action (`pauseVoiceInterview`/`resumeVoiceInterview`) reaches this already-running job. */
+		function readPausedFromMetadata(raw: string | undefined): boolean {
+			try {
+				return Boolean(JSON.parse(raw || "{}").paused);
+			} catch {
+				return false;
+			}
+		}
+
 		const userData: SessionUserData = {
 			attemptId: metadata.attemptId,
 			rubric: metadata.rubric,
 			covered: new Set<string>(),
 			currentQuestionId: firstId,
 			publishCoverage,
+			paused: readPausedFromMetadata(ctx.room.metadata),
 		};
+		ctx.room.on(RoomEvent.RoomMetadataChanged, (raw: string) => {
+			userData.paused = readPausedFromMetadata(raw);
+		});
 
 		await publishCoverage(
 			buildCoverageSnapshot({

@@ -10,6 +10,8 @@ import type {
 	ReviewReport,
 	ReviewScript,
 	ReviewSession,
+	ReviewSessionParticipantRow,
+	ReviewTranscriptTurnRow,
 	SessionStatus,
 } from "./types";
 
@@ -231,6 +233,8 @@ export async function updateAttemptRow(
 			| "transcriptRedactedJson"
 			| "dataResidencyRegion"
 			| "audioAnonymized"
+			| "currentQuestionId"
+			| "pausedAt"
 		>
 	>,
 ): Promise<ReviewAttempt> {
@@ -407,6 +411,107 @@ export async function listReports(
 		queries,
 	});
 	return result.rows as unknown as ReviewReport[];
+}
+
+export async function createParticipantRow(
+	data: Omit<ReviewSessionParticipantRow, "$id">,
+	permissions: string[],
+): Promise<ReviewSessionParticipantRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		rowId: ID.unique(),
+		data,
+		permissions,
+	});
+	return row as unknown as ReviewSessionParticipantRow;
+}
+
+export async function findParticipantRow(
+	attemptId: string,
+	userId: string,
+): Promise<ReviewSessionParticipantRow | null> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		queries: [
+			Query.equal("attemptId", attemptId),
+			Query.equal("userId", userId),
+			Query.limit(1),
+		],
+	});
+	return (result.rows[0] as unknown as ReviewSessionParticipantRow) ?? null;
+}
+
+export async function listParticipantRows(
+	orgId: string,
+	attemptId: string,
+): Promise<ReviewSessionParticipantRow[]> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("attemptId", attemptId),
+			Query.limit(50),
+		],
+	});
+	return result.rows as unknown as ReviewSessionParticipantRow[];
+}
+
+export async function updateParticipantRow(
+	rowId: string,
+	data: Partial<
+		Pick<
+			ReviewSessionParticipantRow,
+			"connectionState" | "micOn" | "camOn" | "joinedAt" | "leftAt" | "role"
+		>
+	>,
+): Promise<ReviewSessionParticipantRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		rowId,
+		data,
+	});
+	return row as unknown as ReviewSessionParticipantRow;
+}
+
+export async function createTranscriptTurnRow(
+	data: Omit<ReviewTranscriptTurnRow, "$id">,
+	permissions?: string[],
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId: ID.unique(),
+		data,
+		...(permissions ? { permissions } : {}),
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function listTranscriptTurnRows(
+	orgId: string,
+	attemptId: string,
+): Promise<ReviewTranscriptTurnRow[]> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("attemptId", attemptId),
+			Query.orderAsc("$createdAt"),
+			Query.limit(500),
+		],
+	});
+	return result.rows as unknown as ReviewTranscriptTurnRow[];
 }
 
 export type { SessionStatus };

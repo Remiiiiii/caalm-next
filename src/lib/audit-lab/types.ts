@@ -53,6 +53,32 @@ export type SessionParticipant = {
 	role: SessionRole;
 };
 
+export const PARTICIPANT_CONNECTION_STATES = [
+	"invited",
+	"joined",
+	"left",
+] as const;
+
+export type ParticipantConnectionState =
+	(typeof PARTICIPANT_CONNECTION_STATES)[number];
+
+/** Live in-room roster row (`review_session_participants`) — distinct from the pre-call invite list in `ReviewSession.participantsJson`. */
+export type ReviewSessionParticipantRow = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId: string;
+	userId: string;
+	name?: string;
+	email?: string;
+	role: SessionRole;
+	connectionState: ParticipantConnectionState;
+	micOn?: boolean;
+	camOn?: boolean;
+	joinedAt?: string;
+	leftAt?: string;
+};
+
 export type ReviewSession = {
 	$id: string;
 	orgId: string;
@@ -127,9 +153,17 @@ export type ReviewAttempt = {
 	/** True when the browser published pitch-shifted mic audio. */
 	audioAnonymized?: boolean;
 	createdByUserId: string;
+	/** Rubric question the AI auditor is currently mid-asking; cleared once answered. */
+	currentQuestionId?: string;
+	/** Set while `status === "paused"`; cleared on resume. */
+	pausedAt?: string;
 };
 
-/** One turn of a voice interview, stored inside `ReviewAttempt.transcriptJson`. */
+/**
+ * One turn of a voice interview. Legacy attempts store these inside
+ * `ReviewAttempt.transcriptJson`; new attempts persist each as its own row in
+ * `review_transcript_turns` (see `ReviewTranscriptTurnRow`) instead.
+ */
 export type VoiceTranscriptTurn = {
 	questionId: string;
 	question: string;
@@ -137,6 +171,21 @@ export type VoiceTranscriptTurn = {
 	at: string;
 	citedEvidence?: string;
 	answerQuality?: "strong" | "adequate" | "weak";
+};
+
+/** Durable per-turn transcript row (`review_transcript_turns`). */
+export type ReviewTranscriptTurnRow = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId: string;
+	questionId?: string;
+	question?: string;
+	answer?: string;
+	citedEvidence?: string;
+	answerQuality?: "strong" | "adequate" | "weak";
+	at: string;
+	redacted?: boolean;
 };
 
 export type ReviewGap = {

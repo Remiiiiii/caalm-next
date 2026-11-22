@@ -1,4 +1,5 @@
 import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
+import type { SessionParticipant } from "./types";
 
 export type LabScope = { kind: "org" } | { kind: "departments"; names: string[] };
 
@@ -68,6 +69,21 @@ export function resolveLabCapabilities(input: {
 		canManagePracticeMedia: managePracticeMedia || manageSessions,
 		readOnly: view && !canMutate && !runPractice,
 	};
+}
+
+/**
+ * Who has in-call authority (pause/resume/end/rubric override) — a role on
+ * this attempt's roster, distinct from `LabCapabilities`, which governs
+ * feature access rather than authority within a live session.
+ */
+export function isSessionFacilitator(
+	participants: SessionParticipant[],
+	userId: string,
+	createdByUserId?: string,
+): boolean {
+	const explicit = participants.find((p) => p.role === "facilitator");
+	if (explicit) return explicit.userId === userId;
+	return Boolean(createdByUserId) && createdByUserId === userId;
 }
 
 export function sessionInScope(

@@ -8,23 +8,39 @@ import {
 	Track,
 	type TranscriptionSegment,
 } from "livekit-client";
-import { Check, Circle, Mic, PhoneOff, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Clapperboard, PhoneOff, User, Video } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { formatPracticeElapsed } from "@/components/audit-lab/PracticeChrome";
+import { PracticeInterviewSetup } from "@/components/audit-lab/PracticeInterviewSetup";
+import { ControlBar } from "@/components/audit-lab/voice/ControlBar";
+import { RosterStrip } from "@/components/audit-lab/voice/RosterRow";
+import { RubricPanel } from "@/components/audit-lab/voice/RubricPanel";
 import {
-	formatPracticeElapsed,
-	PracticeLiveShell,
-	PracticeProgressBar,
-	PracticeSessionPersonaControls,
-} from "@/components/audit-lab/PracticeChrome";
+	TranscriptPanel,
+	type TranscriptTurn,
+} from "@/components/audit-lab/voice/TranscriptPanel";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { AUDITOR_PERSONAS } from "@/lib/audit-lab/roleplay";
-import type { ReviewSession } from "@/lib/audit-lab/types";
+import { useRealtime } from "@/hooks/useRealtime";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { isSessionFacilitator } from "@/lib/audit-lab/access";
+import {
+	type AuditorPersona,
+	INTERVIEWER_PROFILES,
+} from "@/lib/audit-lab/roleplay";
+import {
+	parseParticipants,
+	type ReviewSession,
+	type ReviewSessionParticipantRow,
+} from "@/lib/audit-lab/types";
 import {
 	createAnonymizedMicStream,
 	shouldForceAudioAnonymization,
 } from "@/lib/audit-lab/voice/anonymize-audio";
 import {
+	buildCoverageSnapshot,
 	type CoverageSnapshot,
 	VOICE_COVERAGE_TOPIC,
 } from "@/lib/audit-lab/voice/coverage";
@@ -81,9 +97,9 @@ export function VoiceInterviewPanel({
 	canViewPracticePii?: boolean;
 }) {
 	const { toast } = useToast();
+	const { user } = useAuth();
 	const [sessionId, setSessionId] = useState(sessions[0]?.$id ?? "");
-	const [persona, setPersona] =
-		useState<(typeof AUDITOR_PERSONAS)[number]>("by_the_book");
+	const [persona, setPersona] = useState<AuditorPersona>("by_the_book");
 	const [phase, setPhase] = useState<Phase>("idle");
 	const [attemptId, setAttemptId] = useState<string | null>(null);
 	const [caption, setCaption] = useState("");
@@ -92,7 +108,22 @@ export function VoiceInterviewPanel({
 	const [coverage, setCoverage] = useState<CoverageSnapshot | null>(null);
 	const [anonymizeAudio, setAnonymizeAudio] = useState(true);
 	const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+	const [participants, setParticipants] = useState<
+		ReviewSessionParticipantRow[]
+	>([]);
+	const [transcriptTurns, setTranscriptTurns] = useState<TranscriptTurn[]>([]);
+	const [micOn, setMicOn] = useState(true);
+	const [camOn, setCamOn] = useState(true);
+	const [showTranscript, setShowTranscript] = useState(true);
+	const [captionsOn, setCaptionsOn] = useState(true);
+	const [interviewStatus, setInterviewStatus] = useState("live");
+	const [showReconsent, setShowReconsent] = useState(false);
+	const [pendingAnonymize, setPendingAnonymize] = useState(true);
+	const rubricRef = useRef<
+		Array<{ questionId: string; prompt: string; difficulty: string }>
+	>([]);
 	const roomRef = useRef<Room | null>(null);
+	const attemptIdRef = useRef<string | null>(null);
 	const audioContainerRef = useRef<HTMLDivElement | null>(null);
 	const localVideoRef = useRef<HTMLVideoElement | null>(null);
 	const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -105,6 +136,12 @@ export function VoiceInterviewPanel({
 
 	const forceAnon = shouldForceAudioAnonymization(canViewPracticePii);
 	const effectiveAnonymize = forceAnon || anonymizeAudio;
+	const selectedSession = sessions.find((s) => s.$id === sessionId);
+	const isFacilitator = isSessionFacilitator(
+		parseParticipants(selectedSession?.participantsJson),
+		user?.$id ?? "",
+		selectedSession?.createdByUserId,
+	);
 
 	useEffect(() => {
 		if (phase !== "live" || !startedAt) return;
@@ -147,8 +184,233 @@ export function VoiceInterviewPanel({
 		return () => {
 			anonymizerStopRef.current?.();
 			void roomRef.current?.disconnect();
+			if (attemptIdRef.current) void leaveSession(attemptIdRef.current);
 		};
 	}, []);
+
+	const onParticipantsUpdate = useCallback(
+		(payload: ReviewSessionParticipantRow) => {
+			if (!payload?.$id || payload.attemptId !== attemptIdRef.current) return;
+			setParticipants((prev) => {
+				const idx = prev.findIndex((p) => p.$id === payload.$id);
+				if (idx < 0) return [...prev, payload];
+				const next = [...prev];
+				next[idx] = payload;
+				return next;
+			});
+		},
+		[],
+	);
+	useRealtime({
+		collectionId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		enabled: phase === "live",
+		onUpdate: onParticipantsUpdate,
+	});
+
+	const onTranscriptUpdate = useCallback(
+		(payload: TranscriptTurn & { attemptId?: string }) => {
+			if (!payload?.$id || payload.attemptId !== attemptIdRef.current) return;
+			setTranscriptTurns((prev) => {
+				if (prev.some((t) => t.$id === payload.$id)) return prev;
+				return [...prev, payload];
+			});
+			if (payload.questionId && rubricRef.current.length > 0) {
+				setCoverage((prev) => {
+					const coveredIds = new Set(prev?.coveredIds ?? []);
+					coveredIds.add(payload.questionId as string);
+					return buildCoverageSnapshot({
+						rubric: rubricRef.current,
+						coveredIds,
+						currentQuestionId: prev?.currentQuestionId ?? null,
+					});
+				});
+			}
+		},
+		[],
+	);
+	useRealtime({
+		collectionId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		enabled: phase === "live",
+		onUpdate: onTranscriptUpdate,
+	});
+
+	const onAttemptUpdate = useCallback(
+		(payload: { $id?: string; status?: string }) => {
+			if (!payload?.$id || payload.$id !== attemptIdRef.current) return;
+			if (payload.status) setInterviewStatus(payload.status);
+		},
+		[],
+	);
+	useRealtime({
+		collectionId: appwriteConfig.reviewAttemptsCollectionId,
+		enabled: phase === "live",
+		onUpdate: onAttemptUpdate,
+	});
+
+	async function postPracticeAction(action: string, extra?: Record<string, unknown>) {
+		if (!attemptIdRef.current) return;
+		await fetch("/api/audit-lab/practice", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ action, attemptId: attemptIdRef.current, ...extra }),
+		});
+	}
+
+	function toggleMic() {
+		const room = roomRef.current;
+		const next = !micOn;
+		for (const pub of room?.localParticipant.trackPublications.values() ?? []) {
+			if (pub.track?.kind === Track.Kind.Audio) {
+				if (next) pub.track.unmute();
+				else pub.track.mute();
+			}
+		}
+		setMicOn(next);
+		void postPracticeAction("set_av_state", { micOn: next });
+	}
+
+	async function toggleCam() {
+		const room = roomRef.current;
+		const next = !camOn;
+		try {
+			await room?.localParticipant.setCameraEnabled(next);
+		} catch {
+			/* camera toggle failures already surface via the initial enable attempt */
+		}
+		setCamOn(next);
+		void postPracticeAction("set_av_state", { camOn: next });
+	}
+
+	function togglePause() {
+		void postPracticeAction(interviewStatus === "paused" ? "resume" : "pause");
+	}
+
+	function downloadTranscript() {
+		const text = transcriptTurns
+			.map((t) => `Q: ${t.question ?? ""}\nA: ${t.answer ?? ""}`)
+			.join("\n\n");
+		const blob = new Blob([text], { type: "text/plain" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `interview-transcript-${attemptIdRef.current ?? "attempt"}.txt`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	async function endOrLeave() {
+		if (isFacilitator) await postPracticeAction("end_voice");
+		await endInterview();
+	}
+
+	function openVoiceAnonToggle() {
+		if (forceAnon) {
+			toast({
+				title: "Voice anonymization",
+				description: "Required for your role — it can't be turned off here.",
+			});
+			return;
+		}
+		setPendingAnonymize(!effectiveAnonymize);
+		setShowReconsent(true);
+	}
+
+	/**
+	 * Re-opens the recording-consent flow mid-call rather than silently flipping
+	 * the anonymization flag, per the spec's "changing it mid-session should
+	 * re-prompt for consent" requirement — then swaps the published mic track
+	 * to match.
+	 */
+	async function confirmReconsentAndSwapMic() {
+		const room = roomRef.current;
+		if (!room) return;
+		await postPracticeAction("consent", { audioAnonymized: pendingAnonymize });
+
+		anonymizerStopRef.current?.();
+		anonymizerStopRef.current = null;
+		for (const pub of [...room.localParticipant.trackPublications.values()]) {
+			if (pub.track?.kind === Track.Kind.Audio) {
+				await room.localParticipant.unpublishTrack(pub.track);
+			}
+		}
+		if (pendingAnonymize) {
+			const ok = await publishAnonymizedMic(room);
+			if (!ok) {
+				toast({
+					title: "Voice anonymization",
+					description:
+						"Could not anonymize your mic. Using the normal microphone instead.",
+				});
+			}
+		} else {
+			await room.localParticipant.setMicrophoneEnabled(true);
+		}
+		setAnonymizeAudio(pendingAnonymize);
+		setShowReconsent(false);
+	}
+
+	/** Seeds roster/transcript/rubric from Appwrite right after joining, so a refresh mid-call doesn't start blank. */
+	async function seedSessionState(id: string) {
+		try {
+			const res = await fetch(`/api/audit-lab/practice/${id}/session`);
+			const json = (await res.json()) as {
+				data?: {
+					currentQuestionId: string | null;
+					participants: ReviewSessionParticipantRow[];
+					transcriptTurns: TranscriptTurn[];
+					rubric: Array<{
+						questionId: string;
+						prompt: string;
+						difficulty: string;
+					}>;
+				};
+			};
+			if (!res.ok || !json.data) return;
+			rubricRef.current = json.data.rubric;
+			setParticipants(json.data.participants);
+			setTranscriptTurns(json.data.transcriptTurns);
+			if (json.data.rubric.length > 0) {
+				setCoverage((prev) =>
+					prev
+						? prev
+						: buildCoverageSnapshot({
+								rubric: json.data?.rubric ?? [],
+								coveredIds: (json.data?.transcriptTurns ?? [])
+									.map((t) => t.questionId)
+									.filter((id): id is string => Boolean(id)),
+								currentQuestionId: json.data?.currentQuestionId ?? null,
+							}),
+				);
+			}
+		} catch (err) {
+			console.error("[VoiceInterviewPanel] seedSessionState", err);
+		}
+	}
+
+	async function joinSession(id: string) {
+		try {
+			await fetch("/api/audit-lab/practice", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ action: "join", attemptId: id }),
+			});
+			await seedSessionState(id);
+		} catch (err) {
+			console.error("[VoiceInterviewPanel] join", err);
+		}
+	}
+
+	async function leaveSession(id: string) {
+		try {
+			await fetch("/api/audit-lab/practice", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ action: "leave", attemptId: id }),
+			});
+		} catch (err) {
+			console.error("[VoiceInterviewPanel] leave", err);
+		}
+	}
 
 	async function requestVoiceInterview() {
 		if (!sessionId) return;
@@ -174,8 +436,15 @@ export function VoiceInterviewPanel({
 				throw new Error("The interview didn't come back fully set up.");
 			}
 			setAttemptId(data.attempt.$id);
+			attemptIdRef.current = data.attempt.$id;
+			setParticipants([]);
+			setTranscriptTurns([]);
+			rubricRef.current = [];
 			setCoverage(null);
 			setHasRemoteVideo(false);
+			setMicOn(true);
+			setCamOn(true);
+			setInterviewStatus("live");
 			pendingRef.current = {
 				roomName: data.roomName,
 				token: data.token,
@@ -245,6 +514,7 @@ export function VoiceInterviewPanel({
 			room.on(RoomEvent.Disconnected, () => {
 				anonymizerStopRef.current?.();
 				anonymizerStopRef.current = null;
+				if (attemptIdRef.current) void leaveSession(attemptIdRef.current);
 				setPhase((p) => (p === "live" ? "ended" : p));
 			});
 			room.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
@@ -314,6 +584,7 @@ export function VoiceInterviewPanel({
 
 			setStartedAt(Date.now());
 			setPhase("live");
+			void joinSession(attemptId);
 		} catch (err) {
 			setPhase("idle");
 			toast({
@@ -342,14 +613,11 @@ export function VoiceInterviewPanel({
 		);
 	}
 
-	const coveredCount = coverage?.coveredIds.length ?? 0;
-	const totalCount = coverage?.total ?? 0;
-
 	return (
 		<div className="space-y-4">
 			<div ref={audioContainerRef} className="sr-only" />
-			{phase === "idle" ? (
-				<PracticeSessionPersonaControls
+			{phase === "idle" || phase === "consent" ? (
+				<PracticeInterviewSetup
 					sessions={sessions}
 					sessionId={sessionId}
 					onSessionId={setSessionId}
@@ -359,45 +627,29 @@ export function VoiceInterviewPanel({
 						<Button
 							type="button"
 							className="btn-primary"
-							disabled={!sessionId}
+							disabled={!sessionId || phase === "consent"}
 							onClick={() => void requestVoiceInterview()}
 						>
-							<Mic className="h-4 w-4" aria-hidden />
+							<Clapperboard className="h-4 w-4" aria-hidden />
 							Start interview
 						</Button>
 					}
 				/>
 			) : null}
 
-			{phase === "consent" ? (
-				<div className="space-y-3 rounded-lg border border-orange/30 bg-orange/5 p-4">
-					<p className="text-sm font-semibold text-slate-700">
-						This session will be recorded
-					</p>
-					<p className="text-sm text-slate-600">
-						Starting turns on your camera and microphone, may show a talking-head
-						interviewer, and stores the recording in CAALM for this organization.
-						Live captions hide common personal details. Voice anonymization is
-						{forceAnon ? " required for your role" : " on by default"}.
-					</p>
-					{!forceAnon ? (
-						<label className="flex items-center gap-2 text-sm text-slate-700">
-							<input
-								type="checkbox"
-								checked={anonymizeAudio}
-								onChange={(e) => setAnonymizeAudio(e.target.checked)}
-							/>
-							Anonymize my voice during the call
-						</label>
-					) : null}
-					<div className="flex gap-2">
-						<Button
-							type="button"
-							className="btn-primary"
-							onClick={() => void confirmConsentAndConnect()}
-						>
-							I consent — start recording
-						</Button>
+			<AppDialog
+				open={phase === "consent"}
+				onOpenChange={(open) => {
+					if (open) return;
+					pendingRef.current = null;
+					setAttemptId(null);
+					setPhase("idle");
+				}}
+				icon={<Video className="h-[17px] w-[17px]" aria-hidden />}
+				title="This session will be recorded"
+				description={`Starting turns on your camera and microphone, may show a talking-head interviewer, and stores the recording in CAALM for this organization. Live captions hide common personal details. Voice anonymization is${forceAnon ? " required for your role" : " on by default"}.`}
+				footer={
+					<>
 						<Button
 							type="button"
 							variant="outline"
@@ -409,37 +661,68 @@ export function VoiceInterviewPanel({
 						>
 							Cancel
 						</Button>
-					</div>
-				</div>
-			) : null}
+						<Button
+							type="button"
+							className="btn-primary"
+							onClick={() => void confirmConsentAndConnect()}
+						>
+							I consent — start recording
+						</Button>
+					</>
+				}
+			>
+				{!forceAnon ? (
+					<label className="flex items-center gap-2 text-sm text-slate-700">
+						<input
+							type="checkbox"
+							checked={anonymizeAudio}
+							onChange={(e) => setAnonymizeAudio(e.target.checked)}
+						/>
+						Anonymize my voice during the call
+					</label>
+				) : null}
+			</AppDialog>
 
 			{phase === "connecting" ? (
 				<p className="text-sm text-slate-500">Connecting…</p>
 			) : null}
 
 			{phase === "live" ? (
-				<PracticeLiveShell
-					headerLeft={
-						<span className="flex items-center gap-1.5 text-xs font-semibold text-green">
-							<span className="h-2 w-2 rounded-full bg-green" aria-hidden />
+				<div className="voice-call-shell">
+					<div className="mb-3 flex items-center justify-between">
+						<span className="flex items-center gap-1.5 text-xs font-semibold text-green-400">
+							<span className="h-2 w-2 rounded-full bg-green-400" aria-hidden />
 							Live — {formatPracticeElapsed(elapsed)}
 						</span>
-					}
-					headerRight={
 						<Button
 							type="button"
 							variant="outline"
-							className="text-red"
-							onClick={() => void endInterview()}
+							className="border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+							onClick={() => void endOrLeave()}
 						>
 							<PhoneOff className="h-4 w-4" aria-hidden />
-							End interview
+							{isFacilitator ? "End interview" : "Leave"}
 						</Button>
-					}
-				>
-					{/* Square tiles match Synthesia's near-square feed so cover fills without pillarbox. */}
-					<div className="grid gap-3 md:grid-cols-2">
-						<div className="relative aspect-square overflow-hidden rounded-lg border border-white/60 bg-slate-900/80">
+					</div>
+
+					<div className="mb-3 flex flex-wrap gap-2">
+						{selectedSession?.title ? (
+							<span className="voice-call-badge">{selectedSession.title}</span>
+						) : null}
+						{selectedSession?.department ? (
+							<span className="voice-call-badge">
+								{selectedSession.department}
+							</span>
+						) : null}
+						{selectedSession?.framework ? (
+							<span className="voice-call-badge">
+								{selectedSession.framework}
+							</span>
+						) : null}
+					</div>
+
+					<div className="grid gap-3 lg:grid-cols-3">
+						<div className="voice-call-stage aspect-video lg:col-span-2">
 							{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
 							<video
 								ref={remoteVideoRef}
@@ -452,85 +735,123 @@ export function VoiceInterviewPanel({
 								muted
 							/>
 							{!hasRemoteVideo ? (
-								<div className="flex h-full flex-col items-center justify-center gap-2 text-white/90">
+								<div className="flex h-full flex-col items-center justify-center gap-2 text-white/60">
 									<span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
 										<User className="h-7 w-7" aria-hidden />
 									</span>
-									<span className="text-xs font-medium">Interviewer</span>
 								</div>
 							) : null}
-						</div>
-						<div className="relative aspect-square overflow-hidden rounded-lg border border-white/60 bg-slate-900/80">
-							{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-							<video
-								ref={localVideoRef}
-								className="h-full w-full object-cover scale-x-[-1]"
-								autoPlay
-								playsInline
-								muted
-							/>
-							<span className="absolute bottom-2 left-2 rounded bg-black/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-								You
+							<span className="voice-call-nameplate">
+								Mock auditor · {INTERVIEWER_PROFILES[persona].name}
 							</span>
+							{captionsOn && caption ? (
+								<p className="voice-call-caption">{caption}</p>
+							) : null}
+							<div className="voice-call-pip">
+								{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+								<video
+									ref={localVideoRef}
+									className="h-full w-full object-cover scale-x-[-1]"
+									autoPlay
+									playsInline
+									muted
+								/>
+								<span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+									You
+								</span>
+							</div>
+						</div>
+
+						<div className="flex flex-col gap-3">
+							<div className="voice-call-panel">
+								<p className="voice-call-panel-title mb-2">Live transcript</p>
+								{showTranscript ? (
+									<TranscriptPanel
+										turns={transcriptTurns}
+										liveCaption={captionsOn ? caption : undefined}
+										auditorLabel={`Mock auditor · ${INTERVIEWER_PROFILES[persona].name}`}
+									/>
+								) : (
+									<p className="text-sm text-white/40">Transcript hidden.</p>
+								)}
+							</div>
+							<div className="voice-call-panel">
+								<p className="voice-call-panel-title mb-2">Rubric coverage</p>
+								<RubricPanel coverage={coverage} />
+							</div>
 						</div>
 					</div>
 
-					{totalCount > 0 ? (
-						<div className="space-y-2">
-							<PracticeProgressBar
-								label="Rubric coverage"
-								current={coveredCount}
-								total={totalCount}
-							/>
-							<ul className="max-h-48 space-y-1.5 overflow-y-auto review-hover-scroll">
-								{(coverage?.items ?? []).map((item) => (
-									<li
-										key={item.questionId}
-										className={cn(
-											"flex items-start gap-2 rounded-md px-2 py-1.5 text-sm",
-											item.status === "current" && "bg-[#078fab]/10",
-											item.status === "covered" && "text-slate-500",
-										)}
-									>
-										{item.status === "covered" ? (
-											<Check
-												className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green"
-												aria-hidden
-											/>
-										) : (
-											<Circle
-												className={cn(
-													"mt-0.5 h-3.5 w-3.5 shrink-0",
-													item.status === "current"
-														? "text-[#078fab]"
-														: "text-slate-300",
-												)}
-												aria-hidden
-											/>
-										)}
-										<span
-											className={cn(
-												item.status === "current" &&
-													"font-medium text-slate-800",
-												item.status === "covered" && "line-through",
-											)}
-										>
-											{item.prompt}
-										</span>
-									</li>
-								))}
-							</ul>
-						</div>
-					) : (
-						<p className="text-xs text-slate-500">
-							Waiting for rubric coverage from the interviewer…
+					{interviewStatus === "paused" ? (
+						<p className="mt-3 rounded-md bg-orange-500/15 px-3 py-2 text-sm font-medium text-orange-200">
+							Interview paused by the facilitator.
 						</p>
-					)}
+					) : null}
 
-					<p className="min-h-12 text-sm text-slate-700">
-						{caption || "Listening…"}
-					</p>
-				</PracticeLiveShell>
+					{showReconsent ? (
+						<div className="mt-3 space-y-3 rounded-lg border border-orange-400/30 bg-orange-500/10 p-4">
+							<p className="text-sm font-semibold text-white">
+								Confirm voice anonymization change
+							</p>
+							<p className="text-sm text-white/70">
+								Changing this mid-call needs a fresh confirmation before it takes
+								effect.
+							</p>
+							<label className="flex items-center gap-2 text-sm text-white/80">
+								<input
+									type="checkbox"
+									checked={pendingAnonymize}
+									onChange={(e) => setPendingAnonymize(e.target.checked)}
+								/>
+								Anonymize my voice during the call
+							</label>
+							<div className="flex gap-2">
+								<Button
+									type="button"
+									className="btn-primary"
+									onClick={() => void confirmReconsentAndSwapMic()}
+								>
+									Confirm change
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setShowReconsent(false)}
+								>
+									Cancel
+								</Button>
+							</div>
+						</div>
+					) : null}
+
+					<div className="mt-3">
+						<RosterStrip participants={participants} />
+					</div>
+
+					<div className="mt-3 flex justify-center">
+						<ControlBar
+							participants={participants}
+							micOn={micOn}
+							onToggleMic={toggleMic}
+							camOn={camOn}
+							onToggleCam={() => void toggleCam()}
+							showTranscript={showTranscript}
+							onToggleTranscript={() => setShowTranscript((v) => !v)}
+							sessionTitle={selectedSession?.title ?? ""}
+							sessionDepartment={selectedSession?.department}
+							sessionFramework={selectedSession?.framework}
+							personaLabel={INTERVIEWER_PROFILES[persona].label}
+							isFacilitator={isFacilitator}
+							isPaused={interviewStatus === "paused"}
+							onTogglePause={togglePause}
+							captionsOn={captionsOn}
+							onToggleCaptions={() => setCaptionsOn((v) => !v)}
+							voiceAnonOn={effectiveAnonymize}
+							onToggleVoiceAnon={openVoiceAnonToggle}
+							onDownloadTranscript={downloadTranscript}
+						/>
+					</div>
+				</div>
 			) : null}
 
 			{phase === "ended" ? (
