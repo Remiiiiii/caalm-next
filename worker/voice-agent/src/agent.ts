@@ -143,8 +143,13 @@ export default defineAgent({
 				? rawAvatarId
 				: `av_${rawAvatarId}`
 			: "";
+		const synthesiaDryRun = process.env.SYNTHESIA_DRY_RUN === "true";
 		let avatarStarted = false;
-		if (synthesiaKey && synthesiaAvatarId) {
+		if (synthesiaDryRun) {
+			console.log(
+				"[voice-agent] SYNTHESIA_DRY_RUN=true; skipping Synthesia avatar call, audio-only",
+			);
+		} else if (synthesiaKey && synthesiaAvatarId) {
 			try {
 				const avatar = new synthesia.AvatarSession(
 					new synthesia.AvatarConfig({

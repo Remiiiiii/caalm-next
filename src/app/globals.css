@@ -3032,13 +3032,12 @@ iframe[src*="splinecode"] {
 	position: relative;
 	overflow: hidden;
 	border-radius: 1.25rem;
-	background:
-		radial-gradient(
-			ellipse 60% 45% at 82% 8%,
-			rgba(255, 255, 255, 0.06),
-			transparent 70%
-		),
-		linear-gradient(160deg, #171b22 0%, #0b0d11 72%);
+	background: radial-gradient(
+		ellipse 140% 110% at 12% 8%,
+		#2b323f 0%,
+		#171b22 48%,
+		#0b0d11 100%
+	);
 	color: #e2e8f0;
 	padding: 1rem;
 	animation: voiceCallOverlayIn 220ms ease-out;
@@ -3059,13 +3058,12 @@ iframe[src*="splinecode"] {
 /** Consent modal panel — same dark surface language as the live window it leads into. */
 .voice-call-consent {
 	border-radius: 1rem;
-	background:
-		radial-gradient(
-			ellipse 60% 45% at 82% 8%,
-			rgba(255, 255, 255, 0.06),
-			transparent 70%
-		),
-		linear-gradient(160deg, #171b22 0%, #0b0d11 72%);
+	background: radial-gradient(
+		ellipse 140% 110% at 12% 8%,
+		#2b323f 0%,
+		#171b22 48%,
+		#0b0d11 100%
+	);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	color: #e2e8f0;
 	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
@@ -3075,6 +3073,22 @@ iframe[src*="splinecode"] {
 	.voice-call-consent {
 		animation: none;
 	}
+}
+
+/**
+ * Consent modal heading fade. Spec calls for a dark-navy-to-gray clip-text
+ * fade (#0f172a -> #64748b) on a near-white panel; .voice-call-consent is
+ * actually dark, so the fade is kept (strong -> soft, left to right) but
+ * recolored to the panel's own light-on-dark range (#e2e8f0 -> #7c8798,
+ * the latter already this panel's secondary-text color) instead of washing
+ * out near-invisible.
+ */
+.voice-call-consent-title {
+	background: linear-gradient(90deg, #e2e8f0 0%, #7c8798 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
 }
 
 /** Live status pill (dot + "Live — 1:00"). Dot carries the status color; label text stays primary gray. */
@@ -3152,8 +3166,8 @@ iframe[src*="splinecode"] {
 	position: absolute;
 	bottom: 0.75rem;
 	right: 0.75rem;
-	width: 7.5rem;
-	height: 5.5rem;
+	width: 9.375rem;
+	height: 6.875rem;
 	overflow: hidden;
 	border-radius: 0.5rem;
 	border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3233,25 +3247,44 @@ iframe[src*="splinecode"] {
 	color: #e2e8f0;
 }
 
+.voice-call-roster-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 2rem;
+	width: 2rem;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: rgba(255, 255, 255, 0.7);
+}
+
 .voice-call-role-pill {
 	display: inline-flex;
 	align-items: center;
 	border-radius: 9999px;
 	background: rgba(255, 255, 255, 0.08);
-	padding: 0.0625rem 0.5rem;
-	font-size: 0.59375rem;
-	font-weight: 700;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	padding: 0.125rem 0.625rem;
+	font-size: 0.65625rem;
+	font-weight: 600;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
 	color: #7c8798;
 }
 .voice-call-role-pill.voice-call-role-pill-facilitator {
+	background: rgba(249, 171, 114, 0.15);
+	border-color: rgba(249, 171, 114, 0.3);
 	color: #f9ab72;
 }
 .voice-call-role-pill.voice-call-role-pill-interviewee {
+	background: rgba(111, 224, 245, 0.15);
+	border-color: rgba(111, 224, 245, 0.3);
 	color: #6fe0f5;
 }
 .voice-call-role-pill.voice-call-role-pill-mock_auditor {
+	background: rgba(7, 143, 171, 0.15);
+	border-color: rgba(7, 143, 171, 0.3);
 	color: #078fab;
 }
 
@@ -3284,16 +3317,17 @@ iframe[src*="splinecode"] {
 .voice-call-control-btn:hover {
 	background: rgba(255, 255, 255, 0.1);
 }
-.voice-call-control-btn[aria-pressed="true"],
-.voice-call-control-btn.voice-call-control-btn-active {
-	background: rgba(7, 143, 171, 0.22);
-	color: #6fe0f5;
-}
 .voice-call-control-btn.voice-call-control-btn-danger {
 	color: #ef7a6d;
 }
 .voice-call-control-btn.voice-call-control-btn-danger:hover {
 	background: rgba(239, 122, 109, 0.15);
+}
+
+.voice-call-control-divider {
+	height: 1.5rem;
+	width: 1px;
+	background: rgba(255, 255, 255, 0.12);
 }
 
 /** Dark pill trigger buttons in the control bar that carry a label (Participants count, Session details). */

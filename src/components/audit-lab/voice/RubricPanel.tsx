@@ -27,7 +27,7 @@ export function RubricPanel({
 					{coveredCount}/{totalCount}
 				</span>
 			</div>
-			<div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+			<div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
 				<div
 					className="h-full rounded-full bg-[#078fab] transition-[width] duration-300"
 					style={{

@@ -234,11 +234,9 @@ function sessionReadinessDisplay(session: ReviewSession): {
 	faded?: boolean;
 	fromPractice: boolean;
 } {
-	const fromPractice =
-		typeof session.practiceReadinessPct === "number" &&
-		Number.isFinite(session.practiceReadinessPct);
-	if (fromPractice) {
-		const pct = Math.max(0, Math.min(100, Math.round(session.practiceReadinessPct)));
+	const practicePct = session.practiceReadinessPct;
+	if (typeof practicePct === "number" && Number.isFinite(practicePct)) {
+		const pct = Math.max(0, Math.min(100, Math.round(practicePct)));
 		const colorClass =
 			pct >= 80 ? "bg-green" : pct >= 50 ? "bg-[#078fab]" : "bg-orange";
 		return { pct, colorClass, fromPractice: true };

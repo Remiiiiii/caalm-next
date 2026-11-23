@@ -508,10 +508,40 @@ export async function listTranscriptTurnRows(
 			Query.equal("orgId", orgId),
 			Query.equal("attemptId", attemptId),
 			Query.orderAsc("$createdAt"),
-			Query.limit(500),
+			Query.limit(1000),
 		],
 	});
 	return result.rows as unknown as ReviewTranscriptTurnRow[];
+}
+
+/** Attachment entries share `review_transcript_turns` with spoken turns (one log, one realtime subscription). */
+export async function createAttachmentRow(
+	data: Omit<ReviewTranscriptTurnRow, "$id">,
+	permissions?: string[],
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId: ID.unique(),
+		data,
+		...(permissions ? { permissions } : {}),
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function updateAttachmentRow(
+	rowId: string,
+	patch: Partial<ReviewTranscriptTurnRow>,
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId,
+		data: patch,
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
 }
 
 export type { SessionStatus };

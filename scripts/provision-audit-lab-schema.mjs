@@ -322,6 +322,34 @@ const TABLES = [
 			},
 			{ key: "at", type: "string", size: 64, required: true },
 			{ key: "redacted", type: "boolean", required: false },
+			// Attachment entries share this table with spoken turns (one ordered log, one
+			// realtime subscription); old rows have no `kind` and are treated as "turn".
+			{
+				key: "kind",
+				type: "enum",
+				elements: ["turn", "attachment"],
+				required: false,
+			},
+			{ key: "fileId", type: "string", size: 64, required: false },
+			{ key: "fileName", type: "string", size: 512, required: false },
+			{ key: "mimeType", type: "string", size: 128, required: false },
+			{ key: "fileSize", type: "integer", required: false },
+			{ key: "uploaderName", type: "string", size: 128, required: false },
+			{
+				key: "source",
+				type: "enum",
+				elements: ["stage_drop", "rubric_item", "floating_widget"],
+				required: false,
+			},
+			{ key: "replyToText", type: "string", size: 2000, required: false },
+			{
+				key: "attachmentStatus",
+				type: "enum",
+				elements: ["uploading", "scanning", "attached", "failed"],
+				required: false,
+			},
+			{ key: "progressPct", type: "integer", required: false, min: 0, max: 100 },
+			{ key: "failureReason", type: "string", size: 500, required: false },
 		],
 		indexes: [
 			{

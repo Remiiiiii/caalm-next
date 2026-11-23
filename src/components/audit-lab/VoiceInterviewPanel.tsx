@@ -14,6 +14,7 @@ import { formatPracticeElapsed } from "@/components/audit-lab/PracticeChrome";
 import { PracticeInterviewSetup } from "@/components/audit-lab/PracticeInterviewSetup";
 import { ConsentCheckbox } from "@/components/audit-lab/voice/ConsentCheckbox";
 import { ControlBar } from "@/components/audit-lab/voice/ControlBar";
+import { GridOverlay } from "@/components/audit-lab/voice/GridOverlay";
 import { RosterStrip } from "@/components/audit-lab/voice/RosterRow";
 import { RubricPanel } from "@/components/audit-lab/voice/RubricPanel";
 import {
@@ -145,11 +146,33 @@ export function VoiceInterviewPanel({
 	const forceAnon = shouldForceAudioAnonymization(canViewPracticePii);
 	const effectiveAnonymize = forceAnon || anonymizeAudio;
 	const selectedSession = sessions.find((s) => s.$id === sessionId);
+	const invitedParticipants = parseParticipants(selectedSession?.participantsJson);
 	const isFacilitator = isSessionFacilitator(
-		parseParticipants(selectedSession?.participantsJson),
+		invitedParticipants,
 		user?.$id ?? "",
 		selectedSession?.createdByUserId,
 	);
+
+	/** Live roster rows win (they carry mic/cam/connection state); everyone else invited to this simulation still shows up, marked "invited". */
+	const rosterParticipants: ReviewSessionParticipantRow[] = invitedParticipants.map(
+		(inv) =>
+			participants.find((p) => p.userId === inv.userId) ?? {
+				$id: inv.userId,
+				orgId: selectedSession?.orgId ?? "",
+				sessionId: selectedSession?.$id ?? "",
+				attemptId: attemptId ?? "",
+				userId: inv.userId,
+				name: inv.name,
+				email: inv.email,
+				role: inv.role,
+				connectionState: "invited",
+			},
+	);
+	for (const live of participants) {
+		if (!rosterParticipants.some((p) => p.userId === live.userId)) {
+			rosterParticipants.push(live);
+		}
+	}
 
 	useEffect(() => {
 		if (phase !== "live" || !startedAt) return;
@@ -255,12 +278,19 @@ export function VoiceInterviewPanel({
 		onUpdate: onAttemptUpdate,
 	});
 
-	async function postPracticeAction(action: string, extra?: Record<string, unknown>) {
+	async function postPracticeAction(
+		action: string,
+		extra?: Record<string, unknown>,
+	) {
 		if (!attemptIdRef.current) return;
 		await fetch("/api/audit-lab/practice", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ action, attemptId: attemptIdRef.current, ...extra }),
+			body: JSON.stringify({
+				action,
+				attemptId: attemptIdRef.current,
+				...extra,
+			}),
 		});
 	}
 
@@ -586,8 +616,7 @@ export function VoiceInterviewPanel({
 			} catch {
 				toast({
 					title: "Camera",
-					description:
-						"Camera could not start. Continuing with audio only.",
+					description: "Camera could not start. Continuing with audio only.",
 				});
 			}
 
@@ -656,59 +685,62 @@ export function VoiceInterviewPanel({
 				}}
 			>
 				<DialogContent
-					className="voice-call-consent max-w-[460px] gap-4 p-6 sm:rounded-2xl"
+					className="voice-call-consent max-w-[460px] gap-4 overflow-hidden p-6 sm:rounded-2xl"
 					overlayClassName="voice-call-scrim"
 					closeButtonClassName="text-white/50 hover:bg-white/10 hover:text-white/80"
 				>
-					<div className="flex items-center gap-2.5">
-						<div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] border border-[#078fab]/30 bg-[#078fab]/15 text-[#6fe0f5]">
-							<Video className="h-[17px] w-[17px]" aria-hidden />
+					<GridOverlay opacity={0.18} />
+					<div className="relative z-[1] grid gap-4">
+						<div className="flex items-center gap-2.5">
+							<div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] border border-[#078fab]/30 bg-[#078fab]/15 text-[#6fe0f5]">
+								<Video className="h-[17px] w-[17px]" aria-hidden />
+							</div>
+							<DialogTitle className="voice-call-consent-title text-sm font-semibold">
+								This session will be recorded
+							</DialogTitle>
 						</div>
-						<DialogTitle className="text-sm font-semibold text-[#e2e8f0]">
-							This session will be recorded
-						</DialogTitle>
-					</div>
-					<DialogDescription className="text-[13px] leading-[1.55] text-[#9aa4b2]">
-						{`Starting turns on your camera and microphone, may show a talking-head interviewer, and stores the recording in CAALM for this organization. Live captions hide common personal details. Voice anonymization is${forceAnon ? " required for your role" : " on by default"}.`}
-					</DialogDescription>
-					<div className="space-y-2.5">
-						<ConsentCheckbox
-							id="voice-consent-i-consent"
-							label="I consent"
-							checked={consentChecked}
-							onChange={setConsentChecked}
-						/>
-						{!forceAnon ? (
+						<DialogDescription className="text-[13px] leading-[1.55] text-[#9aa4b2]">
+							{`Starting turns on your camera and microphone, may show a talking-head interviewer, and stores the recording in CAALM for this organization. Live captions hide common personal details. Voice anonymization is${forceAnon ? " required for your role" : " on by default"}.`}
+						</DialogDescription>
+						<div className="space-y-2.5">
 							<ConsentCheckbox
-								id="voice-consent-anonymize"
-								label="Anonymize my voice during the call"
-								checked={anonymizeAudio}
-								onChange={setAnonymizeAudio}
+								id="voice-consent-i-consent"
+								label="I consent"
+								checked={consentChecked}
+								onChange={setConsentChecked}
 							/>
-						) : null}
-					</div>
-					<div className="flex justify-end gap-2 pt-1">
-						<Button
-							type="button"
-							variant="ghost"
-							className="voice-consent-btn-cancel"
-							onClick={() => {
-								pendingRef.current = null;
-								setAttemptId(null);
-								setPhase("idle");
-							}}
-						>
-							Cancel
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							className="voice-consent-btn-primary"
-							disabled={!consentChecked}
-							onClick={() => void confirmConsentAndConnect()}
-						>
-							Start recording
-						</Button>
+							{!forceAnon ? (
+								<ConsentCheckbox
+									id="voice-consent-anonymize"
+									label="Anonymize my voice during the call"
+									checked={anonymizeAudio}
+									onChange={setAnonymizeAudio}
+								/>
+							) : null}
+						</div>
+						<div className="flex justify-end gap-2 pt-1">
+							<Button
+								type="button"
+								variant="ghost"
+								className="voice-consent-btn-cancel"
+								onClick={() => {
+									pendingRef.current = null;
+									setAttemptId(null);
+									setPhase("idle");
+								}}
+							>
+								Cancel
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								className="voice-consent-btn-primary"
+								disabled={!consentChecked}
+								onClick={() => void confirmConsentAndConnect()}
+							>
+								Start recording
+							</Button>
+						</div>
 					</div>
 				</DialogContent>
 			</Dialog>
@@ -719,182 +751,186 @@ export function VoiceInterviewPanel({
 
 			{phase === "live" ? (
 				<div className="voice-call-shell">
-					<div className="mb-3 flex items-center justify-between">
-						<span
-							className={cn(
-								"voice-call-live-status flex items-center gap-1.5",
-								interviewStatus === "paused" &&
-									"voice-call-live-status-paused",
-							)}
-						>
+					<GridOverlay opacity={0.18} />
+					<div className="relative z-[1]">
+						<div className="mb-3 flex items-center justify-between">
 							<span
 								className={cn(
-									"voice-call-live-dot",
+									"voice-call-live-status flex items-center gap-1.5",
 									interviewStatus === "paused" &&
-										"voice-call-live-dot-paused",
+										"voice-call-live-status-paused",
 								)}
-								aria-hidden
-							/>
-							{interviewStatus === "paused" ? "Paused" : "Live"} —{" "}
-							{formatPracticeElapsed(elapsed)}
-						</span>
-						<Button
-							type="button"
-							variant="outline"
-							className="border-[#ef7a6d]/30 bg-[#ef7a6d]/10 text-[#ef7a6d] hover:bg-[#ef7a6d]/20"
-							onClick={() => void endOrLeave()}
-						>
-							<PhoneOff className="h-4 w-4" aria-hidden />
-							{isFacilitator ? "End interview" : "Leave"}
-						</Button>
-					</div>
-
-					<div className="mb-3 flex flex-wrap gap-2">
-						{selectedSession?.title ? (
-							<span className="voice-call-badge">{selectedSession.title}</span>
-						) : null}
-						{selectedSession?.department ? (
-							<span className="voice-call-badge">
-								{selectedSession.department}
-							</span>
-						) : null}
-						{selectedSession?.framework ? (
-							<span className="voice-call-badge">
-								{selectedSession.framework}
-							</span>
-						) : null}
-					</div>
-
-					<div className="grid gap-3 lg:grid-cols-3">
-						<div className="voice-call-stage aspect-video lg:col-span-2">
-							{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-							<video
-								ref={remoteVideoRef}
-								className={cn(
-									"h-full w-full object-cover object-top",
-									!hasRemoteVideo && "hidden",
-								)}
-								autoPlay
-								playsInline
-								muted
-							/>
-							{!hasRemoteVideo ? (
-								<div className="flex h-full flex-col items-center justify-center gap-2 text-[#7c8798]">
-									<span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
-										<User className="h-7 w-7" aria-hidden />
-									</span>
-								</div>
-							) : null}
-							<span className="voice-call-nameplate">
-								Mock auditor · {INTERVIEWER_PROFILES[persona].name}
-							</span>
-							{captionsOn && caption ? (
-								<p className="voice-call-caption">{caption}</p>
-							) : null}
-							<div className="voice-call-pip">
-								{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-								<video
-									ref={localVideoRef}
-									className="h-full w-full object-cover scale-x-[-1]"
-									autoPlay
-									playsInline
-									muted
+							>
+								<span
+									className={cn(
+										"voice-call-live-dot",
+										interviewStatus === "paused" &&
+											"voice-call-live-dot-paused",
+									)}
+									aria-hidden
 								/>
-								<span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide text-[#e2e8f0]/80">
-									You
+								{interviewStatus === "paused" ? "Paused" : "Live"} —{" "}
+								{formatPracticeElapsed(elapsed)}
+							</span>
+							<Button
+								type="button"
+								variant="outline"
+								className="rounded-full border-[#ef7a6d]/30 bg-[#ef7a6d]/10 text-[#ef7a6d] hover:bg-[#ef7a6d]/20"
+								onClick={() => void endOrLeave()}
+							>
+								<PhoneOff className="h-4 w-4" aria-hidden />
+								{isFacilitator ? "End interview" : "Leave"}
+							</Button>
+						</div>
+
+						<div className="mb-3 flex flex-wrap gap-2">
+							{selectedSession?.title ? (
+								<span className="voice-call-badge">
+									{selectedSession.title}
 								</span>
-							</div>
+							) : null}
+							{selectedSession?.department ? (
+								<span className="voice-call-badge">
+									{selectedSession.department}
+								</span>
+							) : null}
+							{selectedSession?.framework ? (
+								<span className="voice-call-badge">
+									{selectedSession.framework}
+								</span>
+							) : null}
 						</div>
 
-						<div className="flex flex-col gap-3">
-							<div className="voice-call-panel">
-								<p className="voice-call-panel-title mb-2">Live transcript</p>
-								{showTranscript ? (
-									<TranscriptPanel
-										turns={transcriptTurns}
-										liveCaption={captionsOn ? caption : undefined}
-										auditorLabel={`Mock auditor · ${INTERVIEWER_PROFILES[persona].name}`}
+						<div className="grid gap-3 lg:grid-cols-2">
+							<div className="flex flex-col gap-3">
+								<div className="voice-call-stage aspect-video">
+									{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+									<video
+										ref={remoteVideoRef}
+										className={cn(
+											"h-full w-full object-contain",
+											!hasRemoteVideo && "hidden",
+										)}
+										autoPlay
+										playsInline
+										muted
 									/>
-								) : (
-									<p className="voice-call-footnote">Transcript hidden.</p>
-								)}
+									{!hasRemoteVideo ? (
+										<div className="flex h-full flex-col items-center justify-center gap-2 text-[#7c8798]">
+											<span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
+												<User className="h-7 w-7" aria-hidden />
+											</span>
+										</div>
+									) : null}
+									<span className="voice-call-nameplate">
+										Mock auditor · {INTERVIEWER_PROFILES[persona].name}
+									</span>
+									{captionsOn && caption ? (
+										<p className="voice-call-caption">{caption}</p>
+									) : null}
+									<div className="voice-call-pip">
+										{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+										<video
+											ref={localVideoRef}
+											className="h-full w-full object-cover scale-x-[-1]"
+											autoPlay
+											playsInline
+											muted
+										/>
+										<span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide text-[#e2e8f0]/80">
+											You
+										</span>
+									</div>
+								</div>
+								<RosterStrip participants={rosterParticipants} />
 							</div>
-							<div className="voice-call-panel">
-								<p className="voice-call-panel-title mb-2">Rubric coverage</p>
-								<RubricPanel coverage={coverage} />
-							</div>
-						</div>
-					</div>
 
-					{interviewStatus === "paused" ? (
-						<p className="mt-3 rounded-md bg-[#f9ab72]/15 px-3 py-2 text-sm font-medium text-[#f9ab72]">
-							Interview paused by the facilitator.
-						</p>
-					) : null}
-
-					{showReconsent ? (
-						<div className="mt-3 space-y-3 rounded-[0.875rem] border border-[#f9ab72]/30 bg-[#f9ab72]/10 p-4">
-							<p className="text-sm font-semibold text-[#e2e8f0]">
-								Confirm voice anonymization change
-							</p>
-							<p className="voice-call-footnote">
-								Changing this mid-call needs a fresh confirmation before it takes
-								effect.
-							</p>
-							<label className="flex items-center gap-2 text-sm text-[#e2e8f0]">
-								<input
-									type="checkbox"
-									checked={pendingAnonymize}
-									onChange={(e) => setPendingAnonymize(e.target.checked)}
-								/>
-								Anonymize my voice during the call
-							</label>
-							<div className="flex gap-2">
-								<Button
-									type="button"
-									className="btn-primary"
-									onClick={() => void confirmReconsentAndSwapMic()}
-								>
-									Confirm change
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									className="border-white/15 bg-transparent text-[#e2e8f0] hover:bg-white/10"
-									onClick={() => setShowReconsent(false)}
-								>
-									Cancel
-								</Button>
+							<div className="flex flex-col gap-3">
+								<div className="voice-call-panel">
+									<p className="voice-call-panel-title mb-2">Live transcript</p>
+									{showTranscript ? (
+										<TranscriptPanel
+											turns={transcriptTurns}
+											liveCaption={captionsOn ? caption : undefined}
+											auditorLabel={`Mock auditor · ${INTERVIEWER_PROFILES[persona].name}`}
+										/>
+									) : (
+										<p className="voice-call-footnote">Transcript hidden.</p>
+									)}
+								</div>
+								<div className="voice-call-panel">
+									<p className="voice-call-panel-title mb-2">Rubric coverage</p>
+									<RubricPanel coverage={coverage} />
+								</div>
 							</div>
 						</div>
-					) : null}
 
-					<div className="mt-3">
-						<RosterStrip participants={participants} />
-					</div>
+						{interviewStatus === "paused" ? (
+							<p className="mt-3 rounded-md bg-[#f9ab72]/15 px-3 py-2 text-sm font-medium text-[#f9ab72]">
+								Interview paused by the facilitator.
+							</p>
+						) : null}
 
-					<div className="mt-3 flex justify-center">
-						<ControlBar
-							participants={participants}
-							micOn={micOn}
-							onToggleMic={toggleMic}
-							camOn={camOn}
-							onToggleCam={() => void toggleCam()}
-							showTranscript={showTranscript}
-							onToggleTranscript={() => setShowTranscript((v) => !v)}
-							sessionTitle={selectedSession?.title ?? ""}
-							sessionDepartment={selectedSession?.department}
-							sessionFramework={selectedSession?.framework}
-							personaLabel={INTERVIEWER_PROFILES[persona].label}
-							isFacilitator={isFacilitator}
-							isPaused={interviewStatus === "paused"}
-							onTogglePause={togglePause}
-							captionsOn={captionsOn}
-							onToggleCaptions={() => setCaptionsOn((v) => !v)}
-							voiceAnonOn={effectiveAnonymize}
-							onToggleVoiceAnon={openVoiceAnonToggle}
-							onDownloadTranscript={downloadTranscript}
-						/>
+						{showReconsent ? (
+							<div className="mt-3 space-y-3 rounded-[0.875rem] border border-[#f9ab72]/30 bg-[#f9ab72]/10 p-4">
+								<p className="text-sm font-semibold text-[#e2e8f0]">
+									Confirm voice anonymization change
+								</p>
+								<p className="voice-call-footnote">
+									Changing this mid-call needs a fresh confirmation before it
+									takes effect.
+								</p>
+								<label className="flex items-center gap-2 text-sm text-[#e2e8f0]">
+									<input
+										type="checkbox"
+										checked={pendingAnonymize}
+										onChange={(e) => setPendingAnonymize(e.target.checked)}
+									/>
+									Anonymize my voice during the call
+								</label>
+								<div className="flex gap-2">
+									<Button
+										type="button"
+										className="btn-primary"
+										onClick={() => void confirmReconsentAndSwapMic()}
+									>
+										Confirm change
+									</Button>
+									<Button
+										type="button"
+										variant="outline"
+										className="border-white/15 bg-transparent text-[#e2e8f0] hover:bg-white/10"
+										onClick={() => setShowReconsent(false)}
+									>
+										Cancel
+									</Button>
+								</div>
+							</div>
+						) : null}
+
+						<div className="mt-3 flex justify-center">
+							<ControlBar
+								participants={rosterParticipants}
+								micOn={micOn}
+								onToggleMic={toggleMic}
+								camOn={camOn}
+								onToggleCam={() => void toggleCam()}
+								showTranscript={showTranscript}
+								onToggleTranscript={() => setShowTranscript((v) => !v)}
+								sessionTitle={selectedSession?.title ?? ""}
+								sessionDepartment={selectedSession?.department}
+								sessionFramework={selectedSession?.framework}
+								personaLabel={INTERVIEWER_PROFILES[persona].label}
+								isFacilitator={isFacilitator}
+								isPaused={interviewStatus === "paused"}
+								onTogglePause={togglePause}
+								captionsOn={captionsOn}
+								onToggleCaptions={() => setCaptionsOn((v) => !v)}
+								voiceAnonOn={effectiveAnonymize}
+								onToggleVoiceAnon={openVoiceAnonToggle}
+								onDownloadTranscript={downloadTranscript}
+							/>
+						</div>
 					</div>
 				</div>
 			) : null}

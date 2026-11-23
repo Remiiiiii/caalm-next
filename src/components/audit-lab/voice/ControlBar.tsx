@@ -80,6 +80,7 @@ export function ControlBar({
 					<VideoOff className="h-4 w-4" aria-hidden />
 				)}
 			</button>
+			<span className="voice-call-control-divider" aria-hidden />
 			<ParticipantsPopover participants={participants} />
 			<button
 				type="button"
@@ -93,6 +94,7 @@ export function ControlBar({
 			>
 				<MessageSquareText className="h-4 w-4" aria-hidden />
 			</button>
+			<span className="voice-call-control-divider" aria-hidden />
 			<SessionDetailsPopover
 				title={sessionTitle}
 				department={sessionDepartment}

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { GridOverlay } from "@/components/audit-lab/voice/GridOverlay";
 import {
 	AVATAR_PHOTO_INNER_BORDER,
 	AVATAR_PHOTO_RING_GRADIENT,
@@ -150,20 +151,8 @@ export function PracticeInterviewSetup({
 				</CardContent>
 			</Card>
 
-			<div className="relative min-w-70 flex-1 basis-105 overflow-hidden rounded-3xl bg-linear-to-br from-[#0aa8c2]/85 via-[#0f5384]/85 to-[#0a2a48]/85 p-6 backdrop-blur-sm">
-				<div
-					className="pointer-events-none absolute inset-0 z-0"
-					style={{
-						backgroundImage:
-							"linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px)",
-						backgroundSize: "40px 40px",
-						maskImage:
-							"radial-gradient(ellipse at top left, transparent 0%, black 95%)",
-						WebkitMaskImage:
-							"radial-gradient(ellipse at top left, transparent 0%, black 95%)",
-					}}
-					aria-hidden
-				/>
+			<div className="relative min-w-70 flex-1 basis-105 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0aa8c2_0%,#0f5384_55%,#0a2f52_100%)] p-6">
+				<GridOverlay opacity={0.65} />
 				<div className="relative z-[2] flex h-full flex-col items-center justify-center gap-4 text-center">
 					<div className="relative">
 						<span
@@ -195,7 +184,7 @@ export function PracticeInterviewSetup({
 								/>
 							</span>
 						</span>
-						<span className="absolute -bottom-3 left-1/2 z-10 inline-block -translate-x-1/2 whitespace-nowrap rounded-full border border-blue/20 bg-white px-3 py-1 text-xs font-semibold text-[#0f5384] shadow-md">
+						<span className="absolute -bottom-3 left-1/2 z-10 inline-block -translate-x-1/2 whitespace-nowrap rounded-full border border-blue/20 bg-white px-3 py-1 text-xs font-semibold text-[#334155] shadow-md">
 							{selected.label}
 						</span>
 					</div>

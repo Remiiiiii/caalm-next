@@ -173,12 +173,23 @@ export type VoiceTranscriptTurn = {
 	answerQuality?: "strong" | "adequate" | "weak";
 };
 
-/** Durable per-turn transcript row (`review_transcript_turns`). */
+export type InterviewLogEntryKind = "turn" | "attachment";
+export type AttachmentSource = "stage_drop" | "rubric_item" | "floating_widget";
+export type AttachmentStatus = "uploading" | "scanning" | "attached" | "failed";
+
+/**
+ * Durable per-entry row in the live-interview log (`review_transcript_turns`).
+ * Shares one table/one realtime subscription between spoken turns and evidence
+ * attachments so the two interleave as a single ordered log — distinguished by
+ * `kind` (rows written before this existed have no `kind` and are treated as
+ * `"turn"`). `questionId` doubles as an attachment's linked rubric item id.
+ */
 export type ReviewTranscriptTurnRow = {
 	$id: string;
 	orgId: string;
 	sessionId: string;
 	attemptId: string;
+	kind?: InterviewLogEntryKind;
 	questionId?: string;
 	question?: string;
 	answer?: string;
@@ -186,6 +197,17 @@ export type ReviewTranscriptTurnRow = {
 	answerQuality?: "strong" | "adequate" | "weak";
 	at: string;
 	redacted?: boolean;
+	// Attachment-only fields:
+	fileId?: string;
+	fileName?: string;
+	mimeType?: string;
+	fileSize?: number;
+	uploaderName?: string;
+	source?: AttachmentSource;
+	replyToText?: string;
+	attachmentStatus?: AttachmentStatus;
+	progressPct?: number;
+	failureReason?: string;
 };
 
 export type ReviewGap = {

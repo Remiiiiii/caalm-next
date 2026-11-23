@@ -1,4 +1,4 @@
-import Avatar from "@/components/ui/avatar";
+import { User } from "lucide-react";
 import type { ReviewSessionParticipantRow } from "@/lib/audit-lab/types";
 import { cn } from "@/lib/utils";
 
@@ -56,11 +56,19 @@ export function RosterStrip({
 	return (
 		<div className="flex gap-2 overflow-x-auto review-hover-scroll" role="list">
 			{visible.map((p) => (
-				<div key={p.$id} role="listitem" className="voice-call-roster-card">
-					<Avatar userId={p.userId} name={p.name} size="sm" />
-					<span className="voice-call-roster-name max-w-20 truncate">
-						{p.name || p.email || "Participant"}
-					</span>
+				<div
+					key={p.$id}
+					role="listitem"
+					className="flex flex-col items-center gap-1.5"
+				>
+					<div className="voice-call-roster-card">
+						<span className="voice-call-roster-icon" aria-hidden>
+							<User className="h-4 w-4" />
+						</span>
+						<span className="voice-call-roster-name max-w-20 truncate">
+							{p.name || p.email || "Participant"}
+						</span>
+					</div>
 					<span className={rolePillClass(p.role)}>{ROLE_LABEL[p.role]}</span>
 				</div>
 			))}

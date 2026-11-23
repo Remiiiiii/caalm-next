@@ -30,6 +30,7 @@ import {
 import { buildSessionReport } from "./reports";
 import {
 	appendEvidenceStatusLog,
+	createAttachmentRow,
 	createAttemptRow,
 	createEvidenceRow,
 	createGapRow,
@@ -51,6 +52,7 @@ import {
 	listScripts,
 	listSessions,
 	listTranscriptTurnRows,
+	updateAttachmentRow,
 	updateAttemptRow,
 	updateEvidenceRow,
 	updateParticipantRow,
@@ -74,6 +76,7 @@ import {
 	parseParticipants,
 	type ReviewAttempt,
 	type ReviewSession,
+	type ReviewTranscriptTurnRow,
 	SESSION_ROLES,
 	type SessionParticipant,
 	type SessionRole,
@@ -1210,6 +1213,110 @@ export async function listTranscriptTurns(
 	}
 	const attempt = await getAttemptUnscoped(attemptId);
 	return JSON.parse(attempt?.transcriptJson || "[]");
+}
+
+/**
+ * Creates the attachment's log entry at upload-start time (status `uploading`),
+ * granted the same per-roster-participant row permissions as a spoken turn
+ * (`recordVoiceTurn`). `questionId`/`replyToText` are passed explicitly by the
+ * caller (whichever of the three entry points started the upload) rather than
+ * read from `attempt.currentQuestionId` here, so the per-rubric-item attach
+ * control can tag a row that isn't the currently-active question.
+ */
+export async function startAttachment(
+	actor: Actor,
+	attemptId: string,
+	input: {
+		fileName: string;
+		mimeType: string;
+		fileSize: number;
+		source: "stage_drop" | "rubric_item" | "floating_widget";
+		questionId?: string;
+		replyToText?: string;
+	},
+): Promise<{ row: ReviewTranscriptTurnRow } | { error: string }> {
+	const attempt = await getAttemptUnscoped(attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const roster = await listParticipantRows(attempt.orgId, attemptId);
+	const permissions = roster.flatMap((p) => [
+		Permission.read(Role.user(p.userId)),
+		Permission.update(Role.user(p.userId)),
+	]);
+	const row = await createAttachmentRow(
+		{
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			kind: "attachment",
+			questionId: input.questionId,
+			replyToText: input.replyToText,
+			fileName: input.fileName,
+			mimeType: input.mimeType,
+			fileSize: input.fileSize,
+			uploaderName: actor.name,
+			source: input.source,
+			attachmentStatus: "uploading",
+			progressPct: 0,
+			at: new Date().toISOString(),
+		},
+		permissions.length > 0 ? permissions : undefined,
+	);
+	await audit(actor, "create", `Attached ${input.fileName} during a practice interview`, {
+		type: "review_attempt",
+		id: attemptId,
+		label: input.fileName,
+	});
+	return { row };
+}
+
+export async function updateAttachmentProgress(
+	rowId: string,
+	progressPct: number,
+): Promise<void> {
+	await updateAttachmentRow(rowId, { progressPct });
+}
+
+export async function markAttachmentScanning(
+	rowId: string,
+	fileId: string,
+): Promise<void> {
+	await updateAttachmentRow(rowId, {
+		attachmentStatus: "scanning",
+		fileId,
+		progressPct: 100,
+	});
+}
+
+export async function markAttachmentAttached(rowId: string): Promise<void> {
+	await updateAttachmentRow(rowId, { attachmentStatus: "attached" });
+}
+
+export async function markAttachmentFailed(
+	rowId: string,
+	reason: string,
+): Promise<void> {
+	await updateAttachmentRow(rowId, {
+		attachmentStatus: "failed",
+		failureReason: reason,
+	});
+}
+
+/** Retries the same row in place (back to `uploading`) — never creates a duplicate entry. */
+export async function retryAttachment(
+	actor: Actor,
+	attemptId: string,
+	rowId: string,
+): Promise<void> {
+	await updateAttachmentRow(rowId, {
+		attachmentStatus: "uploading",
+		progressPct: 0,
+		failureReason: "",
+	});
+	await audit(actor, "update", "Retried a failed interview attachment", {
+		type: "review_attempt",
+		id: attemptId,
+		label: rowId,
+	});
 }
 
 /** Resolves this attempt's facilitator userId: whoever the session's invite list tags `facilitator`, falling back to the attempt's creator if no one has been explicitly assigned. */
