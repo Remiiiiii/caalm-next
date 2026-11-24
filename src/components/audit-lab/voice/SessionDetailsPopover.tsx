@@ -24,7 +24,7 @@ export function SessionDetailsPopover({
 					className="voice-call-control-btn"
 					aria-label="Session details"
 				>
-					<Info className="h-4 w-4" aria-hidden />
+					<Info className="h-3.5 w-3.5" aria-hidden />
 				</button>
 			</PopoverTrigger>
 			<PopoverContent

@@ -1,12 +1,52 @@
-import { Check, Circle } from "lucide-react";
+import { Check, Circle, Paperclip } from "lucide-react";
+import { useRef } from "react";
 import type { CoverageSnapshot } from "@/lib/audit-lab/voice/coverage";
 import { cn } from "@/lib/utils";
 
-/** Progress bar + checklist of rubric items covered so far (spec's `RubricPanel`). */
+function RubricAttachButton({
+	questionId,
+	prompt,
+	onAttach,
+}: {
+	questionId: string;
+	prompt: string;
+	onAttach: (file: File, questionId: string, prompt: string) => void;
+}) {
+	const inputRef = useRef<HTMLInputElement | null>(null);
+	return (
+		<>
+			<input
+				ref={inputRef}
+				type="file"
+				className="hidden"
+				onChange={(e) => {
+					const file = e.target.files?.[0];
+					e.target.value = "";
+					if (file) onAttach(file, questionId, prompt);
+				}}
+			/>
+			<button
+				type="button"
+				title="Attach evidence to this question"
+				className="shrink-0 rounded-full p-1 text-[#7c8798] hover:bg-white/10 hover:text-[#6fe0f5]"
+				onClick={(e) => {
+					e.stopPropagation();
+					inputRef.current?.click();
+				}}
+			>
+				<Paperclip className="h-3.5 w-3.5" aria-hidden />
+			</button>
+		</>
+	);
+}
+
+/** Progress bar + checklist of rubric items covered so far (spec's `RubricPanel`) — each row can also attach evidence tagged to that specific item, independent of which item is currently active. */
 export function RubricPanel({
 	coverage,
+	onAttach,
 }: {
 	coverage: CoverageSnapshot | null;
+	onAttach?: (file: File, questionId: string, prompt: string) => void;
 }) {
 	const coveredCount = coverage?.coveredIds.length ?? 0;
 	const totalCount = coverage?.total ?? 0;
@@ -20,14 +60,14 @@ export function RubricPanel({
 	}
 
 	return (
-		<div className="space-y-2">
-			<div className="flex items-center justify-between text-xs font-semibold text-[#7c8798]">
+		<div className="flex min-h-0 flex-1 flex-col space-y-2">
+			<div className="flex shrink-0 items-center justify-between text-xs font-semibold text-[#7c8798]">
 				<span>Rubric coverage</span>
 				<span className="tabular-nums text-[#7c8798]">
 					{coveredCount}/{totalCount}
 				</span>
 			</div>
-			<div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+			<div className="h-1 w-full shrink-0 overflow-hidden rounded-full bg-white/10">
 				<div
 					className="h-full rounded-full bg-[#078fab] transition-[width] duration-300"
 					style={{
@@ -35,7 +75,7 @@ export function RubricPanel({
 					}}
 				/>
 			</div>
-			<ul className="max-h-40 space-y-1.5 overflow-y-auto review-hover-scroll">
+			<ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto review-hover-scroll">
 				{(coverage?.items ?? []).map((item) => (
 					<li
 						key={item.questionId}
@@ -63,6 +103,7 @@ export function RubricPanel({
 						)}
 						<span
 							className={cn(
+								"flex-1",
 								item.status === "current" && "font-medium text-[#e2e8f0]",
 								item.status === "remaining" && "text-[#aab2c0]",
 								item.status === "covered" && "text-[#5d6675] line-through",
@@ -70,6 +111,15 @@ export function RubricPanel({
 						>
 							{item.prompt}
 						</span>
+						{onAttach &&
+						item.requiresEvidence &&
+						item.status !== "remaining" ? (
+							<RubricAttachButton
+								questionId={item.questionId}
+								prompt={item.prompt}
+								onAttach={onAttach}
+							/>
+						) : null}
 					</li>
 				))}
 			</ul>

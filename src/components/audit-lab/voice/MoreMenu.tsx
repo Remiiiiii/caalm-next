@@ -41,7 +41,7 @@ export function MoreMenu({
 					className="voice-call-control-btn"
 					aria-label="More options"
 				>
-					<MoreHorizontal className="h-4 w-4" aria-hidden />
+					<MoreHorizontal className="h-3.5 w-3.5" aria-hidden />
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent

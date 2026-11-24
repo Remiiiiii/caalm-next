@@ -1,4 +1,7 @@
+"use client";
+
 import { User } from "lucide-react";
+import { type PointerEvent, useRef, useState } from "react";
 import type { ReviewSessionParticipantRow } from "@/lib/audit-lab/types";
 import { cn } from "@/lib/utils";
 
@@ -52,14 +55,52 @@ export function RosterStrip({
 	participants: ReviewSessionParticipantRow[];
 }) {
 	const visible = participants.filter((p) => p.role !== "mock_auditor");
+	const scrollRef = useRef<HTMLDivElement | null>(null);
+	const dragRef = useRef<{ startX: number; startScrollLeft: number } | null>(
+		null,
+	);
+	const [isDragging, setIsDragging] = useState(false);
+
+	function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
+		const el = scrollRef.current;
+		if (!el) return;
+		dragRef.current = { startX: e.clientX, startScrollLeft: el.scrollLeft };
+		setIsDragging(true);
+		el.setPointerCapture(e.pointerId);
+	}
+
+	function handlePointerMove(e: PointerEvent<HTMLDivElement>) {
+		const el = scrollRef.current;
+		if (!dragRef.current || !el) return;
+		el.scrollLeft =
+			dragRef.current.startScrollLeft - (e.clientX - dragRef.current.startX);
+	}
+
+	function endDrag(e: PointerEvent<HTMLDivElement>) {
+		dragRef.current = null;
+		setIsDragging(false);
+		scrollRef.current?.releasePointerCapture(e.pointerId);
+	}
+
 	if (visible.length === 0) return null;
 	return (
-		<div className="flex gap-2 overflow-x-auto review-hover-scroll" role="list">
+		<div
+			ref={scrollRef}
+			className={cn(
+				"flex gap-2 overflow-x-auto",
+				isDragging ? "cursor-grabbing select-none" : "cursor-grab",
+			)}
+			role="list"
+			onPointerDown={handlePointerDown}
+			onPointerMove={handlePointerMove}
+			onPointerUp={endDrag}
+			onPointerLeave={endDrag}
+		>
 			{visible.map((p) => (
 				<div
 					key={p.$id}
 					role="listitem"
-					className="flex flex-col items-center gap-1.5"
+					className="flex shrink-0 flex-col items-center gap-1.5"
 				>
 					<div className="voice-call-roster-card">
 						<span className="voice-call-roster-icon" aria-hidden>

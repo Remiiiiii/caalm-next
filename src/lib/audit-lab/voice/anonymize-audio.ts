@@ -38,6 +38,13 @@ export async function createAnonymizedMicStream(
 	if (!AudioCtx) return null;
 
 	const ctx = new AudioCtx();
+	// Some browsers create AudioContext in "suspended" state (autoplay policy) even
+	// from a user gesture — a suspended context never runs the graph, so the
+	// destination track carries silence while the raw mic stream (and the OS
+	// recording indicator) stays active. Resume explicitly so STT actually hears audio.
+	if (ctx.state === "suspended") {
+		await ctx.resume().catch(() => {});
+	}
 	const source = ctx.createMediaStreamSource(rawStream);
 	const filter = ctx.createBiquadFilter();
 	filter.type = "highshelf";

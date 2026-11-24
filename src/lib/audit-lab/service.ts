@@ -52,6 +52,7 @@ import {
 	listScripts,
 	listSessions,
 	listTranscriptTurnRows,
+	resolveAccountIds,
 	updateAttachmentRow,
 	updateAttemptRow,
 	updateEvidenceRow,
@@ -76,6 +77,7 @@ import {
 	parseParticipants,
 	type ReviewAttempt,
 	type ReviewSession,
+	type ReviewSessionParticipantRow,
 	type ReviewTranscriptTurnRow,
 	SESSION_ROLES,
 	type SessionParticipant,
@@ -83,7 +85,7 @@ import {
 	type SessionStatus,
 } from "./types";
 import { scorecardToPracticeReadinessPct } from "./voice/coverage";
-import { gradeVoiceTranscript } from "./voice/grade";
+import { gradeVoiceTranscript, summarizeVoiceTranscript } from "./voice/grade";
 import { redactTranscriptTurns } from "./voice/pii";
 import {
 	deletePracticeRecordingFile,
@@ -374,10 +376,34 @@ export async function assignSessionRole(
 	return { session, participants };
 }
 
+// Interview is voice/audio-only — the AI auditor grades spoken answers and any
+// attached documentation, never a live screen-share walkthrough. Prompts are
+// worded so the interviewee can fully answer by describing the process. The
+// `review_questions` collection has no `requiresEvidence` column (adding one
+// needs an explicit schema-change approval — see ReviewQuestion.requiresEvidence
+// in types.ts), so it isn't written here: `rubric`'s wording is what
+// `requiresEvidenceFromRubric` (voice/rubric.ts) reads back to derive the flag —
+// only the two rows below that actually ask for a record/documentation turn on
+// the attach control.
 const TEMPLATE_QUESTIONS = [
-	"Walk me through the last time you reviewed access for this system. Who approved it, and where is the record?",
-	"Show me how a new hire receives access. What happens if the manager is out?",
-	"When a control failed last year, what changed in your process? Show me evidence of the new step.",
+	{
+		prompt:
+			"Walk me through the last time you reviewed access for this system. Who approved it, and where is the record?",
+		rubric:
+			"Answer from the last real occurrence; attach the approval record if you have it.",
+	},
+	{
+		prompt:
+			"In your own words, describe how a new hire receives access to this system, and what happens if their manager is out.",
+		rubric:
+			"Graded on the verbal explanation of the process, not a live demonstration.",
+	},
+	{
+		prompt:
+			"When a control failed last year, what changed in your process? Describe the new step in detail.",
+		rubric:
+			"Answer from the last real occurrence; attach documentation of the new step if you have it.",
+	},
 ];
 
 export async function generateQuestionBank(actor: Actor, sessionId: string) {
@@ -387,7 +413,7 @@ export async function generateQuestionBank(actor: Actor, sessionId: string) {
 		(await listQuestions(actor.orgId, sessionId)).map((q) => q.prompt.trim()),
 	);
 	const created = [];
-	for (const prompt of TEMPLATE_QUESTIONS) {
+	for (const { prompt, rubric } of TEMPLATE_QUESTIONS) {
 		if (existingPrompts.has(prompt.trim())) continue;
 		created.push(
 			await createQuestionRow({
@@ -396,7 +422,7 @@ export async function generateQuestionBank(actor: Actor, sessionId: string) {
 				prompt,
 				source: "template",
 				difficulty: "medium",
-				rubric: "Answer from the last real occurrence; show the record.",
+				rubric,
 				createdByUserId: actor.userId,
 			}),
 		);
@@ -1104,7 +1130,9 @@ export async function deleteVoicePracticeRecording(
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	if (attempt.recordingFileId) {
-		await deletePracticeRecordingFile(attempt.recordingFileId).catch(() => undefined);
+		await deletePracticeRecordingFile(attempt.recordingFileId).catch(
+			() => undefined,
+		);
 	}
 	const updated = await updateAttemptRow(attemptId, {
 		recordingFileId: "",
@@ -1119,10 +1147,7 @@ export async function deleteVoicePracticeRecording(
 	return { attempt: updated };
 }
 
-export async function auditPracticePiiReveal(
-	actor: Actor,
-	attemptId: string,
-) {
+export async function auditPracticePiiReveal(actor: Actor, attemptId: string) {
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	await logAuditEvent({
@@ -1151,6 +1176,25 @@ export async function auditPracticePiiReveal(
  * to the attempt's JSON blob, so Appwrite Realtime can push just the new row
  * instead of re-sending the whole growing transcript on every turn.
  */
+/**
+ * Builds per-roster-participant Appwrite permissions, translated from this
+ * app's own `users` row id (what roster rows call `userId`) to the real
+ * Appwrite auth account id — `Role.user(...)` only ever matches the latter,
+ * so a grant built straight from the row id silently never matches anyone.
+ */
+async function buildRosterPermissions(
+	roster: ReviewSessionParticipantRow[],
+): Promise<string[]> {
+	const accountIds = await resolveAccountIds(roster.map((p) => p.userId));
+	return roster.flatMap((p) => {
+		const accountId = accountIds.get(p.userId) ?? p.userId;
+		return [
+			Permission.read(Role.user(accountId)),
+			Permission.update(Role.user(accountId)),
+		];
+	});
+}
+
 export async function recordVoiceTurn(
 	attemptId: string,
 	turn: {
@@ -1164,10 +1208,7 @@ export async function recordVoiceTurn(
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	const roster = await listParticipantRows(attempt.orgId, attemptId);
-	const permissions = roster.flatMap((p) => [
-		Permission.read(Role.user(p.userId)),
-		Permission.update(Role.user(p.userId)),
-	]);
+	const permissions = await buildRosterPermissions(roster);
 	await createTranscriptTurnRow(
 		{
 			orgId: attempt.orgId,
@@ -1238,10 +1279,7 @@ export async function startAttachment(
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	const roster = await listParticipantRows(attempt.orgId, attemptId);
-	const permissions = roster.flatMap((p) => [
-		Permission.read(Role.user(p.userId)),
-		Permission.update(Role.user(p.userId)),
-	]);
+	const permissions = await buildRosterPermissions(roster);
 	const row = await createAttachmentRow(
 		{
 			orgId: attempt.orgId,
@@ -1261,11 +1299,16 @@ export async function startAttachment(
 		},
 		permissions.length > 0 ? permissions : undefined,
 	);
-	await audit(actor, "create", `Attached ${input.fileName} during a practice interview`, {
-		type: "review_attempt",
-		id: attemptId,
-		label: input.fileName,
-	});
+	await audit(
+		actor,
+		"create",
+		`Attached ${input.fileName} during a practice interview`,
+		{
+			type: "review_attempt",
+			id: attemptId,
+			label: input.fileName,
+		},
+	);
 	return { row };
 }
 
@@ -1354,7 +1397,10 @@ function resolveInviteRole(
 }
 
 /** Upserts a live roster row when a participant's browser connects to the room. */
-export async function joinSessionAsParticipant(actor: Actor, attemptId: string) {
+export async function joinSessionAsParticipant(
+	actor: Actor,
+	attemptId: string,
+) {
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	const session = await getSession(actor.orgId, attempt.sessionId);
@@ -1503,9 +1549,10 @@ export async function finalizeVoiceInterview(roomName: string) {
 	const rubric = buildVoiceRubric(questions);
 	const transcript = await listTranscriptTurns(attempt.orgId, attemptId);
 
-	const scorecard = await gradeVoiceTranscript({ rubric, transcript }).catch(
-		() => null,
-	);
+	const [scorecard, summary] = await Promise.all([
+		gradeVoiceTranscript({ rubric, transcript }).catch(() => null),
+		summarizeVoiceTranscript({ rubric, transcript }).catch(() => null),
+	]);
 	let practiceReadinessPct: number | undefined;
 	if (scorecard) {
 		await createReportRow({
@@ -1519,6 +1566,15 @@ export async function finalizeVoiceInterview(roomName: string) {
 		await updateSessionRow(attempt.sessionId, { practiceReadinessPct }).catch(
 			() => undefined,
 		);
+	}
+	if (summary) {
+		await createReportRow({
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			kind: "practice_summary",
+			bodyJson: JSON.stringify({ attemptId: attempt.$id, ...summary }),
+			createdByUserId: attempt.createdByUserId,
+		}).catch(() => undefined);
 	}
 	const redacted = redactTranscriptTurns(transcript);
 	const updated = await updateAttemptRow(attemptId, {

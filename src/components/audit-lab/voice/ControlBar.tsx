@@ -1,4 +1,4 @@
-import { Mic, MessageSquareText, MicOff, Video, VideoOff } from "lucide-react";
+import { MessageSquareText, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { MoreMenu } from "@/components/audit-lab/voice/MoreMenu";
 import { ParticipantsPopover } from "@/components/audit-lab/voice/ParticipantsPopover";
 import { SessionDetailsPopover } from "@/components/audit-lab/voice/SessionDetailsPopover";
@@ -59,9 +59,9 @@ export function ControlBar({
 				)}
 			>
 				{micOn ? (
-					<Mic className="h-4 w-4" aria-hidden />
+					<Mic className="h-3.5 w-3.5" aria-hidden />
 				) : (
-					<MicOff className="h-4 w-4" aria-hidden />
+					<MicOff className="h-3.5 w-3.5" aria-hidden />
 				)}
 			</button>
 			<button
@@ -75,9 +75,9 @@ export function ControlBar({
 				)}
 			>
 				{camOn ? (
-					<Video className="h-4 w-4" aria-hidden />
+					<Video className="h-3.5 w-3.5" aria-hidden />
 				) : (
-					<VideoOff className="h-4 w-4" aria-hidden />
+					<VideoOff className="h-3.5 w-3.5" aria-hidden />
 				)}
 			</button>
 			<span className="voice-call-control-divider" aria-hidden />
@@ -92,7 +92,7 @@ export function ControlBar({
 					showTranscript && "voice-call-control-btn-active",
 				)}
 			>
-				<MessageSquareText className="h-4 w-4" aria-hidden />
+				<MessageSquareText className="h-3.5 w-3.5" aria-hidden />
 			</button>
 			<span className="voice-call-control-divider" aria-hidden />
 			<SessionDetailsPopover

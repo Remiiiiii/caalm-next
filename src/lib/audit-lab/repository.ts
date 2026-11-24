@@ -24,6 +24,36 @@ async function tables() {
 	return tablesDB;
 }
 
+/**
+ * Maps `users` collection row ids (what this app calls "userId" everywhere —
+ * roster rows, `createdByUserId`, etc.) to the real Appwrite auth account id.
+ * The two differ: Appwrite's realtime/permission system only ever recognizes
+ * `Role.user(accountId)`, so a permission grant built from the row id instead
+ * never matches the actual connected user. Falls back to the row id itself
+ * for any id with no matching row, so a lookup miss degrades to the (still
+ * broken, but no worse than before) previous behavior rather than throwing.
+ */
+export async function resolveAccountIds(
+	userIds: string[],
+): Promise<Map<string, string>> {
+	const unique = [...new Set(userIds)].filter(Boolean);
+	const map = new Map<string, string>(unique.map((id) => [id, id]));
+	if (unique.length === 0) return map;
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.usersCollectionId || "users",
+		queries: [Query.equal("$id", unique), Query.limit(unique.length)],
+	});
+	for (const row of result.rows as unknown as Array<{
+		$id: string;
+		accountId?: string;
+	}>) {
+		if (row.accountId) map.set(row.$id, row.accountId);
+	}
+	return map;
+}
+
 export async function createSessionRow(
 	data: Omit<ReviewSession, "$id" | "$createdAt" | "$updatedAt">,
 ): Promise<ReviewSession> {

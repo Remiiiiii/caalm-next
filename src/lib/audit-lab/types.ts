@@ -116,6 +116,8 @@ export type ReviewQuestion = {
 	rubric?: string;
 	controlRef?: string;
 	createdByUserId: string;
+	/** Whether this item expects supporting documentation, not just a spoken answer. Rows created before this field existed fall back to inferring it from `rubric` text — see `requiresEvidenceFromRubric`. */
+	requiresEvidence?: boolean;
 };
 
 export type ReviewScript = {

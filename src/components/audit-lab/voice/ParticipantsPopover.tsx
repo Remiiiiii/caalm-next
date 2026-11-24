@@ -23,7 +23,7 @@ export function ParticipantsPopover({
 					className="voice-call-control-chip-btn"
 					aria-label="Participants"
 				>
-					<Users className="h-4 w-4" aria-hidden />
+					<Users className="h-3.5 w-3.5" aria-hidden />
 					{joinedCount}
 				</button>
 			</PopoverTrigger>

@@ -9,6 +9,7 @@ export type VoiceRubricItem = {
 	source: string;
 	difficulty: string;
 	controlRef?: string;
+	requiresEvidence: boolean;
 };
 
 export type VoiceAgentJobMetadata = {

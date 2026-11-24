@@ -2,6 +2,7 @@ import { cli, defineAgent, voice, WorkerOptions } from "@livekit/agents";
 import * as anthropic from "@livekit/agents-plugin-anthropic";
 import * as deepgram from "@livekit/agents-plugin-deepgram";
 import * as elevenlabs from "@livekit/agents-plugin-elevenlabs";
+import { BackgroundVoiceCancellation } from "@livekit/noise-cancellation-node";
 import * as silero from "@livekit/agents-plugin-silero";
 import * as synthesia from "@livekit/agents-plugin-synthesia";
 import { RoomEvent } from "@livekit/rtc-node";
@@ -120,6 +121,15 @@ export default defineAgent({
 					process.env.ELEVENLABS_AUDIT_LAB_VOICE_ID?.trim() ||
 					process.env.ELEVENLABS_VOICE_ID,
 			}),
+			// SDK defaults (500ms/3000ms) assume casual chat. An audit interview
+			// expects the interviewee to pause and recall a specific policy or
+			// figure — a longer floor avoids cutting them off mid-thought, while
+			// adaptive interruption (rather than leaving it to auto-detect) keeps
+			// backchannel sounds ("mm-hmm") from being treated as a real interrupt.
+			turnHandling: {
+				endpointing: { minDelay: 700, maxDelay: 4000 },
+				interruption: { mode: "adaptive" },
+			},
 		});
 
 		const agent = new voice.Agent({
@@ -181,6 +191,10 @@ export default defineAgent({
 		await session.start({
 			agent,
 			room: ctx.room,
+			// Also strips secondary background voices, which otherwise confuse
+			// transcription and turn detection — the interviewee is rarely alone
+			// in a quiet room during a real audit interview.
+			inputOptions: { noiseCancellation: BackgroundVoiceCancellation() },
 			// When Synthesia owns A/V, disable the agent's own room audio output.
 			outputOptions: avatarStarted ? { audioEnabled: false } : undefined,
 		});
