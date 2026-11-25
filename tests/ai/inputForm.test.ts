@@ -99,7 +99,7 @@ describe("scheduleEventForm", () => {
 			"2026-10-31",
 		);
 		expect(form.fields.filter((f) => f.required).map((f) => f.name)).toEqual(
-			["title", "date", "startTime", "type"],
+			["title", "date", "startTime", "type", "description"],
 		);
 	});
 });
@@ -140,5 +140,34 @@ describe("resolveInputForm", () => {
 
 	it("returns null when there is nothing to show", () => {
 		expect(resolveInputForm({ intent: "input", rawFields: [] })).toBeNull();
+	});
+
+	it("strips a stray '(optional)' suffix from description/participants labels, and forces participants (only) to optional even if the model marked it required", () => {
+		const resolved = resolveInputForm({
+			intent: "schedule_event",
+			intro: "Almost there",
+			rawFields: [
+				{ name: "title", label: "Title", type: "text", required: true },
+				{
+					name: "description",
+					label: "Agenda (optional)",
+					type: "textarea",
+					required: true,
+				},
+				{
+					name: "participants",
+					label: "Participants (optional)",
+					type: "text",
+					required: true,
+				},
+			],
+		});
+		const byName = (name: string) =>
+			resolved?.form.fields.find((f) => f.name === name);
+		expect(byName("title")?.required).toBe(true);
+		expect(byName("description")?.label).toBe("Agenda");
+		expect(byName("description")?.required).toBe(true);
+		expect(byName("participants")?.label).toBe("Participants");
+		expect(byName("participants")?.required).toBe(false);
 	});
 });

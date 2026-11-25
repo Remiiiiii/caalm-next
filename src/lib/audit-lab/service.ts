@@ -59,7 +59,11 @@ import {
 	updateParticipantRow,
 	updateSessionRow,
 } from "./repository";
-import { followUpForVagueAnswer } from "./roleplay";
+import {
+	type AuditorPersona,
+	followUpForVagueAnswer,
+	INTERVIEWER_PROFILES,
+} from "./roleplay";
 import { applyPracticeScore } from "./score";
 import {
 	emptyCanvas,
@@ -1021,6 +1025,19 @@ export async function startVoicePracticeRound(
 		dataResidencyRegion: residency,
 		createdByUserId: actor.userId,
 	});
+	await audit(
+		actor,
+		"create",
+		`Started a voice interview on ${existing.title}`,
+		{ type: "review_attempt", id: attempt.$id, label: existing.title },
+	);
+
+	// Simone/Valentina run on Nuance Live, which mints its own room/credentials
+	// (see the nuance-token route) — no LiveKit room or worker job here.
+	if (INTERVIEWER_PROFILES[persona as AuditorPersona]?.backend === "nuance") {
+		return { attempt, backend: "nuance" as const };
+	}
+
 	const roomName = `review-attempt-${attempt.$id}`;
 	const metadata: VoiceAgentJobMetadata = {
 		attemptId: attempt.$id,
@@ -1042,12 +1059,6 @@ export async function startVoicePracticeRound(
 		callId: roomName,
 		dataResidencyRegion: residency,
 	});
-	await audit(
-		actor,
-		"create",
-		`Started a voice interview on ${existing.title}`,
-		{ type: "review_attempt", id: attempt.$id, label: existing.title },
-	);
 	return {
 		attempt: updated,
 		roomName,
@@ -1541,6 +1552,19 @@ export async function endVoiceInterview(actor: Actor, attemptId: string) {
  */
 export async function finalizeVoiceInterview(roomName: string) {
 	const attemptId = roomName.replace(/^review-attempt-/, "");
+	return finalizeVoiceInterviewAttempt(attemptId);
+}
+
+/**
+ * Called from the browser when a Nuance Live call ends (`session-ended`) —
+ * there is no LiveKit room/webhook for a Nuance-hosted conversation.
+ */
+export async function finalizeNuanceInterview(attemptId: string) {
+	return finalizeVoiceInterviewAttempt(attemptId);
+}
+
+/** Shared grading/report body for both the LiveKit and Nuance voice backends. */
+export async function finalizeVoiceInterviewAttempt(attemptId: string) {
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	if (attempt.status === "completed") return { attempt };

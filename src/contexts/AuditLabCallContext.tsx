@@ -10,6 +10,11 @@
  */
 
 import {
+	createNuanceConversation,
+	type Conversation as NuanceConversation,
+	type ToolCall as NuanceToolCall,
+} from "@nuancelabs/js-sdk";
+import {
 	ConnectionQuality,
 	type LocalTrack,
 	type RemoteTrack,
@@ -45,10 +50,20 @@ import {
 	type CoverageSnapshot,
 	VOICE_COVERAGE_TOPIC,
 } from "@/lib/audit-lab/voice/coverage";
+import {
+	NUANCE_FLAG_CLARIFICATION_TOOL,
+	NUANCE_RECORD_RESPONSE_TOOL,
+} from "@/lib/audit-lab/voice/nuance";
 import { redactPii } from "@/lib/audit-lab/voice/pii";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 export type CallPhase = "idle" | "consent" | "connecting" | "live" | "ended";
+
+/** The common shape of LiveKit's LocalTrack/RemoteTrack and Nuance's VideoTrack/AudioTrack — enough to attach/detach without caring which backend produced the track. */
+type AttachableVideoTrack = {
+	attach: (el: HTMLVideoElement) => unknown;
+	detach: () => unknown;
+};
 
 /**
  * Mirrors LiveKit's own Reconnecting/Reconnected/ConnectionQualityChanged
@@ -177,9 +192,11 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	const audioContainerRef = useRef<HTMLDivElement | null>(null);
 	const localVideoElRef = useRef<HTMLVideoElement | null>(null);
 	const remoteVideoElRef = useRef<HTMLVideoElement | null>(null);
-	const localVideoTrackRef = useRef<LocalTrack | null>(null);
+	// LiveKit's LocalTrack/RemoteTrack and Nuance's VideoTrack both expose
+	// attach(el)/detach(), so one pair of refs serves both call backends.
+	const localVideoTrackRef = useRef<AttachableVideoTrack | null>(null);
 	const remoteVideoTrackRef = useRef<{
-		track: RemoteTrack;
+		track: AttachableVideoTrack;
 		attributes?: Record<string, string>;
 	} | null>(null);
 	const anonymizerStopRef = useRef<(() => void) | null>(null);
@@ -189,6 +206,12 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 		token: string;
 		livekitUrl: string;
 	} | null>(null);
+
+	/** "nuance" for Simone/Valentina (see roleplay.ts `backend`); otherwise the LiveKit room + worker path. */
+	const backendRef = useRef<"livekit" | "nuance">("livekit");
+	const nuanceConversationRef = useRef<NuanceConversation | null>(null);
+	const nuanceUnsubsRef = useRef<Array<() => void>>([]);
+	const nuanceAudioElRef = useRef<HTMLAudioElement | null>(null);
 
 	const registerLocalVideoEl = useCallback((el: HTMLVideoElement | null) => {
 		localVideoElRef.current = el;
@@ -222,6 +245,8 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 		return () => {
 			anonymizerStopRef.current?.();
 			void roomRef.current?.disconnect();
+			for (const unsub of nuanceUnsubsRef.current) unsub();
+			void nuanceConversationRef.current?.disconnect();
 			if (attemptIdRef.current) void leaveSession(attemptIdRef.current);
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,12 +331,18 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	}
 
 	function toggleMic() {
-		const room = roomRef.current;
 		const next = !micOn;
-		for (const pub of room?.localParticipant.trackPublications.values() ?? []) {
-			if (pub.track?.kind === Track.Kind.Audio) {
-				if (next) pub.track.unmute();
-				else pub.track.mute();
+		if (backendRef.current === "nuance") {
+			const user = nuanceConversationRef.current?.user;
+			if (user) void (next ? user.unmuteAudio() : user.muteAudio());
+		} else {
+			const room = roomRef.current;
+			for (const pub of room?.localParticipant.trackPublications.values() ??
+				[]) {
+				if (pub.track?.kind === Track.Kind.Audio) {
+					if (next) pub.track.unmute();
+					else pub.track.mute();
+				}
 			}
 		}
 		setMicOn(next);
@@ -319,10 +350,14 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	}
 
 	async function toggleCam() {
-		const room = roomRef.current;
 		const next = !camOn;
 		try {
-			await room?.localParticipant.setCameraEnabled(next);
+			if (backendRef.current === "nuance") {
+				const user = nuanceConversationRef.current?.user;
+				if (user) await (next ? user.enableVideo() : user.disableVideo());
+			} else {
+				await roomRef.current?.localParticipant.setCameraEnabled(next);
+			}
 		} catch {
 			/* camera toggle failures already surface via the initial enable attempt */
 		}
@@ -345,12 +380,39 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	async function endInterview() {
 		anonymizerStopRef.current?.();
 		anonymizerStopRef.current = null;
-		await roomRef.current?.disconnect();
+		if (backendRef.current === "nuance") {
+			for (const unsub of nuanceUnsubsRef.current) unsub();
+			nuanceUnsubsRef.current = [];
+			await nuanceConversationRef.current?.disconnect();
+			nuanceConversationRef.current = null;
+			nuanceAudioElRef.current?.remove();
+			nuanceAudioElRef.current = null;
+		} else {
+			await roomRef.current?.disconnect();
+		}
 		setPhase("ended");
+	}
+
+	/** No LiveKit `room_finished` webhook exists for a Nuance call, so grading has to be triggered from here instead. */
+	async function postNuanceEnd(attemptId: string) {
+		try {
+			await fetch("/api/audit-lab/practice/voice/nuance-end", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ attemptId }),
+			});
+		} catch (err) {
+			console.error("[AuditLabCallContext] nuance-end", err);
+		} finally {
+			void leaveSession(attemptId);
+		}
 	}
 
 	async function endOrLeaveCall() {
 		if (isFacilitator) await postPracticeAction("end_voice");
+		if (backendRef.current === "nuance" && attemptIdRef.current) {
+			void postNuanceEnd(attemptIdRef.current);
+		}
 		await endInterview();
 	}
 
@@ -492,6 +554,7 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 				error?: string;
 				data?: {
 					attempt?: { $id: string };
+					backend?: "nuance";
 					roomName?: string;
 					token?: string;
 					livekitUrl?: string;
@@ -500,9 +563,14 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 			if (!res.ok)
 				throw new Error(json.error || "Could not start the interview.");
 			const data = json.data;
-			if (!data?.attempt || !data.roomName || !data.token || !data.livekitUrl) {
+			const isNuance = data?.backend === "nuance";
+			if (
+				!data?.attempt ||
+				(!isNuance && (!data.roomName || !data.token || !data.livekitUrl))
+			) {
 				throw new Error("The interview didn't come back fully set up.");
 			}
+			backendRef.current = isNuance ? "nuance" : "livekit";
 			setAttemptId(data.attempt.$id);
 			attemptIdRef.current = data.attempt.$id;
 			setParticipants([]);
@@ -517,11 +585,13 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 			setConnectionStatus("healthy");
 			setIsFacilitator(facilitator);
 			setSessionMeta(meta);
-			pendingRef.current = {
-				roomName: data.roomName,
-				token: data.token,
-				livekitUrl: data.livekitUrl,
-			};
+			pendingRef.current = isNuance
+				? null
+				: {
+						roomName: data.roomName as string,
+						token: data.token as string,
+						livekitUrl: data.livekitUrl as string,
+					};
 			setPhase("consent");
 			return { ok: true };
 		} catch (err) {
@@ -538,10 +608,177 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 		setPhase("idle");
 	}
 
+	/**
+	 * Nuance manages microphone capture internally with no raw-stream hook, so
+	 * the anonymized-mic pipeline (`publishAnonymizedMic`) doesn't carry over —
+	 * record consent truthfully and tell the user instead of silently ignoring it.
+	 */
+	async function connectNuance(initialAudioAnonymized: boolean) {
+		if (initialAudioAnonymized) {
+			toast({
+				title: "Voice anonymization",
+				description:
+					"This interviewer doesn't support voice anonymization yet. Continuing with your normal microphone.",
+			});
+		}
+		await fetch("/api/audit-lab/practice", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				action: "consent",
+				attemptId: attemptIdRef.current,
+				audioAnonymized: false,
+			}),
+		});
+
+		const conversation = createNuanceConversation({
+			token: async () => {
+				const res = await fetch("/api/audit-lab/practice/voice/nuance-token", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ attemptId: attemptIdRef.current }),
+				});
+				const json = (await res.json()) as {
+					error?: string;
+					data?: { token: string };
+				};
+				if (!res.ok || !json.data) {
+					throw new Error(
+						json.error || "Could not start the voice interviewer.",
+					);
+				}
+				return json.data.token;
+			},
+		});
+		nuanceConversationRef.current = conversation;
+
+		const unsubs: Array<() => void> = [];
+		unsubs.push(
+			conversation.onChange((event) => {
+				if (event.type === "tracks-changed") {
+					const { videoTrack, audioTrack } = conversation.avatar;
+					if (videoTrack) {
+						remoteVideoTrackRef.current = { track: videoTrack };
+						if (remoteVideoElRef.current) {
+							videoTrack.attach(remoteVideoElRef.current);
+							setHasRemoteVideo(true);
+						}
+					}
+					if (audioTrack && !nuanceAudioElRef.current) {
+						const el = document.createElement("audio");
+						el.autoplay = true;
+						audioTrack.attach(el);
+						audioContainerRef.current?.appendChild(el);
+						nuanceAudioElRef.current = el;
+					}
+					const userVideoTrack = conversation.user.videoTrack;
+					if (userVideoTrack) {
+						localVideoTrackRef.current = userVideoTrack;
+						if (localVideoElRef.current)
+							userVideoTrack.attach(localVideoElRef.current);
+					}
+				} else if (event.type === "session-ended") {
+					setPhase((p) => (p === "live" ? "ended" : p));
+					if (attemptIdRef.current) void postNuanceEnd(attemptIdRef.current);
+				}
+			}),
+		);
+		unsubs.push(
+			conversation.onToolCall(async (call) => {
+				try {
+					const result = await handleNuanceToolCall(call);
+					await conversation.sendToolResult(call.callId, result);
+				} catch (err) {
+					await conversation.sendToolResult(call.callId, {
+						error: {
+							message:
+								err instanceof Error
+									? err.message
+									: "Could not record that turn.",
+						},
+					});
+				}
+			}),
+		);
+		const handleBeforeUnload = () => {
+			if (!attemptIdRef.current) return;
+			fetch("/api/audit-lab/practice/voice/nuance-end", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ attemptId: attemptIdRef.current }),
+				keepalive: true,
+			}).catch(() => undefined);
+		};
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		unsubs.push(() =>
+			window.removeEventListener("beforeunload", handleBeforeUnload),
+		);
+		nuanceUnsubsRef.current = unsubs;
+
+		await conversation.connect();
+
+		setStartedAt(Date.now());
+		setPhase("live");
+		void joinSession(attemptIdRef.current as string);
+	}
+
+	async function handleNuanceToolCall(call: NuanceToolCall): Promise<string> {
+		const attemptId = attemptIdRef.current;
+		if (!attemptId) return "No active attempt.";
+		if (call.name === NUANCE_FLAG_CLARIFICATION_TOOL) {
+			const reason = String(call.arguments?.reason ?? "that answer");
+			return `Ask a single, specific follow-up addressing: ${reason}. Do not move to a new rubric item yet.`;
+		}
+		if (call.name === NUANCE_RECORD_RESPONSE_TOOL) {
+			const res = await fetch("/api/audit-lab/practice/voice/nuance-turn", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					attemptId,
+					questionId: call.arguments?.questionId,
+					answerSummary: call.arguments?.answerSummary,
+					citedEvidence: call.arguments?.citedEvidence,
+					answerQuality: call.arguments?.answerQuality,
+				}),
+			});
+			const json = (await res.json()) as {
+				error?: string;
+				data?: {
+					next: { questionId: string; prompt: string } | null;
+					remaining: number;
+				};
+			};
+			if (!res.ok || !json.data)
+				return json.error || "Could not record that turn.";
+			const { next, remaining } = json.data;
+			if (!next)
+				return "That was the last rubric item. Wrap up and end the call.";
+			return `Recorded. ${remaining} rubric item(s) left. Next, ask about: "${next.prompt}" (questionId: ${next.questionId}).`;
+		}
+		return `Unknown tool "${call.name}".`;
+	}
+
 	async function confirmConsentAndConnect(initialAudioAnonymized: boolean) {
-		if (!attemptIdRef.current || !pendingRef.current) return;
+		if (!attemptIdRef.current) return;
 		setPhase("connecting");
 		setAudioAnonymizedState(initialAudioAnonymized);
+		if (backendRef.current === "nuance") {
+			try {
+				await connectNuance(initialAudioAnonymized);
+			} catch (err) {
+				setPhase("idle");
+				toast({
+					title: "Voice interview",
+					description: toUserFacingErrorMessage(
+						err,
+						"Could not connect to the voice interviewer. Check your microphone permission.",
+					),
+					variant: "destructive",
+				});
+			}
+			return;
+		}
+		if (!pendingRef.current) return;
 		try {
 			await fetch("/api/audit-lab/practice", {
 				method: "POST",

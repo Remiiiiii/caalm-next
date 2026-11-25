@@ -1,5 +1,6 @@
 "use client";
 
+import { LayersPlus } from "lucide-react";
 import { useState } from "react";
 import { useSWRConfig } from "swr";
 import { ClmRoadmapPage } from "@/components/it/roadmap/ClmRoadmapPage";
@@ -32,6 +33,7 @@ export function TodoRoadmapPage() {
 			toast({
 				title: "Section added",
 				description: `${data.prTitle} — opened PR #${data.prNumber}.`,
+				icon: <LayersPlus className="h-4 w-4" />,
 			});
 			setPrompt("");
 			await mutate(OVERVIEW_PATH);

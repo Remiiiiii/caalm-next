@@ -14,6 +14,7 @@ import {
 	openTodoStubPr,
 	TodoStubPrError,
 } from "@/lib/roadmap/todo/open-stub-pr";
+import { syncTodoSectionsFromGitHub } from "@/lib/roadmap/todo/sync-from-github";
 import { TODO_ROADMAP_CATALOG } from "@/lib/roadmap/todo/todo-catalog";
 import {
 	buildTodoSectionPrBody,
@@ -35,6 +36,11 @@ export async function POST(request: NextRequest) {
 				{ status: 400 },
 			);
 		}
+
+		// GitHub is the source of truth for anything beyond the static 20 —
+		// refresh before picking the next section number so numbering stays
+		// correct even on a fresh process that hasn't rendered the board yet.
+		await syncTodoSectionsFromGitHub().catch(() => {});
 
 		const generated = await generateTodoSectionFromPrompt(prompt.trim());
 		const sectionNumber = nextDynamicTodoSectionNumber(
@@ -58,6 +64,9 @@ export async function POST(request: NextRequest) {
 		section.linkedPrNumbers = [prNumber];
 		section.tasks[0]!.linkedPrNumber = prNumber;
 
+		// Optimistic — shows up this instant, ahead of GitHub's own PR-list
+		// cache; the next sync (service.ts's getOverview) reconciles it with
+		// GitHub's real copy once that cache catches up.
 		addDynamicTodoSection(section);
 		invalidateRoadmapOverviewCache("todo");
 
