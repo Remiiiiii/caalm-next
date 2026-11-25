@@ -13,9 +13,9 @@ Inventory of what exists in this repo as of the inspection date. Paths are repo-
 | Tailwind theme extensions | `tailwind.config.mjs` (loaded by `globals.css` via `@config`) |
 | Shared UI primitives | `src/components/ui/*` |
 | Data-table chrome tokens | `src/lib/ui/data-table-styles.ts`, `src/components/ui/caalm-data-table.tsx` |
-| Generated / secondary design notes | `design-system/caalm/MASTER.md` (and page overrides under `design-system/caalm/pages/`) |
+| Short CAALM summary for agents / ui-ux-pro-max | `design-system/caalm/MASTER.md` (page overrides under `design-system/caalm/pages/`) |
 
-> Note: `design-system/caalm/MASTER.md` contains a **generated** palette (Fira fonts, amber CTA `#F59E0B`, etc.) that does **not** match the implemented product tokens below. Product UI follows `global-style-guide.mdc` + `globals.css` + `tailwind.config.*`. This inventory records both.
+> Note: `design-system/caalm/MASTER.md` is kept in sync with product UI (updated 2026-11-21). If it disagrees with `.cursor/rules/global-style-guide.mdc`, the style guide wins.
 
 ---
 

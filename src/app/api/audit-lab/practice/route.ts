@@ -2,9 +2,15 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { resolveAuditLabActor } from "@/lib/audit-lab/actor";
 import {
+	endVoiceInterview,
+	joinSessionAsParticipant,
+	leaveSessionAsParticipant,
+	pauseVoiceInterview,
 	recordVoiceConsent,
 	requestFeedback,
+	resumeVoiceInterview,
 	scoreAnswer,
+	setParticipantAvState,
 	startPracticeRound,
 	startVoicePracticeRound,
 } from "@/lib/audit-lab/service";
@@ -37,6 +43,8 @@ export async function POST(request: NextRequest) {
 			retrievalMs?: number;
 			showMe?: boolean;
 			audioAnonymized?: boolean;
+			micOn?: boolean;
+			camOn?: boolean;
 		};
 		const action = String(body.action ?? "start");
 		if (action === "start_voice") {
@@ -83,6 +91,67 @@ export async function POST(request: NextRequest) {
 			);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "join") {
+			const result = await joinSessionAsParticipant(
+				resolved.actor,
+				String(body.attemptId ?? ""),
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "leave") {
+			const result = await leaveSessionAsParticipant(
+				resolved.actor,
+				String(body.attemptId ?? ""),
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "set_av_state") {
+			const result = await setParticipantAvState(
+				resolved.actor,
+				String(body.attemptId ?? ""),
+				{ micOn: body.micOn, camOn: body.camOn },
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "pause") {
+			const result = await pauseVoiceInterview(
+				resolved.actor,
+				String(body.attemptId ?? ""),
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 403 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "resume") {
+			const result = await resumeVoiceInterview(
+				resolved.actor,
+				String(body.attemptId ?? ""),
+			);
+			if ("error" in result) {
+				return NextResponse.json({ error: result.error }, { status: 403 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "end_voice") {
+			const result = await endVoiceInterview(
+				resolved.actor,
+				String(body.attemptId ?? ""),
+			);
+			if ("error" in result) {
+				return NextResponse.json({ error: result.error }, { status: 403 });
 			}
 			return NextResponse.json({ data: result });
 		}

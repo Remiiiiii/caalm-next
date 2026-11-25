@@ -5,8 +5,44 @@
  */
 
 import type { RealtimeResponseEvent } from "appwrite";
+import { getRealtimeSessionSecret } from "@/lib/actions/auth.actions";
 import { client } from "@/lib/appwrite/client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+
+const SESSION_ROTATE_INTERVAL_MS = 10 * 60 * 1000;
+let realtimeAuthPromise: Promise<void> | null = null;
+
+async function mintAndSetRealtimeSession(): Promise<void> {
+	try {
+		const secret = await getRealtimeSessionSecret();
+		if (secret) client.setSession(secret);
+	} catch (error) {
+		console.error("[RealtimeService] Could not mint realtime session:", error);
+	}
+}
+
+/**
+ * The browser's Appwrite client has no session by default — the app's own
+ * session cookie is httpOnly and scoped to this origin, so it never reaches
+ * Appwrite Cloud for the Realtime WebSocket handshake, which then connects
+ * anonymously. Document-permission-gated collections (`read(Role.user(...))`)
+ * never deliver events to an anonymous connection, silently. A session set
+ * via `client.setSession(...)` fixes that — Realtime's own auth handshake
+ * only ever reads `config.session`, never a JWT. Memoized so only the first
+ * subscriber waits on it; re-minted on an interval since (unlike a JWT) a
+ * session for the 2FA login path has no short expiry of its own, so this app
+ * rotates it — each mint revokes the previous rotation's session first.
+ */
+function ensureRealtimeAuth(): Promise<void> {
+	if (!realtimeAuthPromise) {
+		realtimeAuthPromise = mintAndSetRealtimeSession();
+		setInterval(
+			() => void mintAndSetRealtimeSession(),
+			SESSION_ROTATE_INTERVAL_MS,
+		);
+	}
+	return realtimeAuthPromise;
+}
 
 export type ConnectionStatus =
 	| "disconnected"
@@ -32,6 +68,8 @@ export interface Subscription {
  */
 class RealtimeService {
 	private subscriptions: Map<string, Subscription> = new Map();
+	/** Latest caller's callbacks per channel — the live `client.subscribe` listener reads from here, so a second `subscribe()` call for an already-open channel still gets its `onUpdate` wired up instead of being silently dropped. */
+	private channelOptions: Map<string, SubscriptionOptions> = new Map();
 	private connectionStatus: ConnectionStatus = "disconnected";
 	private reconnectAttempts: number = 0;
 	private maxReconnectAttempts: number = 5;
@@ -48,93 +86,101 @@ class RealtimeService {
 	): Subscription {
 		const channel = `databases.${appwriteConfig.databaseId}.collections.${collectionId}.documents`;
 
-		// If already subscribed, return existing subscription
+		// Always keep the latest caller's callbacks live, even when the channel is already open.
+		this.channelOptions.set(channel, options);
+
+		// If already subscribed, reuse the open socket — just point it at the new callbacks above.
 		if (this.subscriptions.has(channel)) {
 			const existing = this.subscriptions.get(channel)!;
+			if (options.onConnect) {
+				setTimeout(() => options.onConnect?.(), 100);
+			}
 			return existing;
 		}
 
 		this.setConnectionStatus("connecting");
 
-		try {
-			const unsubscribe = client.subscribe(
-				channel,
-				(event: RealtimeResponseEvent<Record<string, unknown>>) => {
-					this.setConnectionStatus("connected");
-					this.reconnectAttempts = 0; // Reset on successful event
-					this.reconnectDelay = 1000; // Reset delay
+		// The actual socket subscribe is deferred until the client is JWT-authenticated
+		// (see ensureRealtimeAuth) — subscribing while anonymous would silently never
+		// receive events for any document-permission-gated collection. `cancelled` guards
+		// against an unsubscribe() that happens before this resolves.
+		let cancelled = false;
+		let rawUnsubscribe: (() => void) | null = null;
 
-					if (options.onUpdate) {
-						try {
-							options.onUpdate(event.payload);
-						} catch (error) {
-							console.error(
-								`[RealtimeService] Error in onUpdate callback for ${channel}:`,
-								error,
-							);
-							if (options.onError) {
-								options.onError(
-									error instanceof Error ? error : new Error(String(error)),
+		void ensureRealtimeAuth().then(() => {
+			if (cancelled) return;
+			try {
+				rawUnsubscribe = client.subscribe(
+					channel,
+					(event: RealtimeResponseEvent<Record<string, unknown>>) => {
+						this.setConnectionStatus("connected");
+						this.reconnectAttempts = 0; // Reset on successful event
+						this.reconnectDelay = 1000; // Reset delay
+
+						const current = this.channelOptions.get(channel);
+						if (current?.onUpdate) {
+							try {
+								current.onUpdate(event.payload);
+							} catch (error) {
+								console.error(
+									`[RealtimeService] Error in onUpdate callback for ${channel}:`,
+									error,
 								);
+								if (current.onError) {
+									current.onError(
+										error instanceof Error ? error : new Error(String(error)),
+									);
+								}
 							}
 						}
-					}
-				},
-			);
-
-			const subscription: Subscription = {
-				unsubscribe: () => {
-					try {
-						unsubscribe();
-						this.subscriptions.delete(channel);
-
-						// If no more subscriptions, update status
-						if (this.subscriptions.size === 0) {
-							this.setConnectionStatus("disconnected");
-						}
-					} catch (error) {
-						console.error(
-							`[RealtimeService] Error unsubscribing from ${channel}:`,
-							error,
-						);
-					}
-				},
-				channel,
-			};
-
-			this.subscriptions.set(channel, subscription);
-
-			// Call onConnect callback
-			if (options.onConnect) {
-				setTimeout(() => {
-					this.setConnectionStatus("connected");
-					options.onConnect?.();
-				}, 100);
-			}
-
-			return subscription;
-		} catch (error) {
-			this.setConnectionStatus("error");
-			console.error(
-				`[RealtimeService] Error subscribing to ${channel}:`,
-				error,
-			);
-
-			if (options.onError) {
-				options.onError(
-					error instanceof Error ? error : new Error(String(error)),
+					},
 				);
+
+				if (options.onConnect) {
+					setTimeout(() => {
+						this.setConnectionStatus("connected");
+						options.onConnect?.();
+					}, 100);
+				}
+			} catch (error) {
+				this.setConnectionStatus("error");
+				console.error(
+					`[RealtimeService] Error subscribing to ${channel}:`,
+					error,
+				);
+				if (options.onError) {
+					options.onError(
+						error instanceof Error ? error : new Error(String(error)),
+					);
+				}
+				this.scheduleReconnect(collectionId, options);
 			}
+		});
 
-			// Attempt reconnection
-			this.scheduleReconnect(collectionId, options);
+		const subscription: Subscription = {
+			unsubscribe: () => {
+				cancelled = true;
+				try {
+					rawUnsubscribe?.();
+					this.subscriptions.delete(channel);
+					this.channelOptions.delete(channel);
 
-			// Return a no-op subscription
-			return {
-				unsubscribe: () => {},
-				channel,
-			};
-		}
+					// If no more subscriptions, update status
+					if (this.subscriptions.size === 0) {
+						this.setConnectionStatus("disconnected");
+					}
+				} catch (error) {
+					console.error(
+						`[RealtimeService] Error unsubscribing from ${channel}:`,
+						error,
+					);
+				}
+			},
+			channel,
+		};
+
+		this.subscriptions.set(channel, subscription);
+		return subscription;
 	}
 
 	/**
@@ -165,6 +211,7 @@ class RealtimeService {
 		});
 
 		this.subscriptions.clear();
+		this.channelOptions.clear();
 		this.setConnectionStatus("disconnected");
 	}
 
