@@ -9,6 +9,16 @@ import type { RoadmapCatalogSection } from "../types";
 
 const SPEC_KEYS = ["Who", "What", "Where", "Why", "When", "How"] as const;
 
+/**
+ * Path (relative to repo root) of the structured-data sidecar committed
+ * alongside the ticket marker on a section's branch — read back by
+ * sync-from-github.ts so GitHub stays the source of truth for the section's
+ * title/description/acceptance criteria, not just its PR link.
+ */
+export function todoSectionSidecarPath(sectionNumber: number): string {
+	return `src/lib/roadmap/todo-batches/s${String(sectionNumber).padStart(2, "0")}.json`;
+}
+
 export function todoBranchName(section: RoadmapCatalogSection): string {
 	const task = section.tasks[0];
 	const slug = section.title

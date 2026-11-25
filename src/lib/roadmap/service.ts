@@ -71,6 +71,7 @@ import {
 	saveSection,
 	saveTask,
 } from "./store";
+import { syncTodoSectionsFromGitHub } from "./todo/sync-from-github";
 import type {
 	RoadmapOverview,
 	RoadmapSection,
@@ -616,6 +617,10 @@ export async function getOverview(options?: {
 		Date.now() - cached.fetchedAt < OVERVIEW_CACHE_MS
 	) {
 		return cached.value;
+	}
+
+	if (catalogKey === "todo") {
+		await syncTodoSectionsFromGitHub().catch(() => {});
 	}
 
 	const [sections, tasksRaw, openPrs] = await Promise.all([

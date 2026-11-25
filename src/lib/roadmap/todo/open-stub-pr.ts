@@ -19,6 +19,7 @@ import {
 	buildTodoSectionPrBody,
 	todoBranchName,
 	todoPullRequestTitle,
+	todoSectionSidecarPath,
 } from "./todo-pr-body";
 
 const execFileAsync = promisify(execFile);
@@ -100,7 +101,28 @@ export async function openTodoStubPr(
 			"utf8",
 		);
 
-		await run("git", ["add", markerPath], worktreeDir);
+		// Structured sidecar, read back by sync-from-github.ts — GitHub (this
+		// branch) is the source of truth for the section's full data, not just
+		// its PR link.
+		const sidecarPath = todoSectionSidecarPath(section.sectionNumber);
+		const sidecarAbsPath = path.join(worktreeDir, sidecarPath);
+		await writeFile(
+			sidecarAbsPath,
+			JSON.stringify(
+				{
+					title: section.title,
+					sourceRef: section.sourceRef,
+					description: task.description,
+					acceptanceCriteria: task.acceptanceCriteria,
+					testSuiteRef: task.testSuiteRef,
+				},
+				null,
+				2,
+			),
+			"utf8",
+		);
+
+		await run("git", ["add", markerPath, sidecarPath], worktreeDir);
 		await run("git", ["commit", "-m", title], worktreeDir);
 		await run("git", ["push", "-u", "origin", branch], worktreeDir);
 
