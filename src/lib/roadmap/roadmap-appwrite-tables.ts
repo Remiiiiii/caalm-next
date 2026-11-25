@@ -39,6 +39,17 @@ export function roadmapAppwriteTableIds(
 			statusLogTableId: appwriteConfig.ptoRoadmapStatusLogCollectionId,
 		};
 	}
+	if (catalogKey === "todo") {
+		// shortcut: no Appwrite table provisioned yet — this board runs on the
+		// in-memory store (see store.ts isUsingAppwriteForCatalog) until a
+		// dedicated todoRoadmap*CollectionId set is added here.
+		return {
+			sectionsTableId: undefined,
+			tasksTableId: undefined,
+			testRunsTableId: undefined,
+			statusLogTableId: undefined,
+		};
+	}
 	return {
 		sectionsTableId: appwriteConfig.roadmapSectionsCollectionId,
 		tasksTableId: appwriteConfig.roadmapTasksCollectionId,
