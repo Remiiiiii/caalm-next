@@ -5,8 +5,19 @@
  * hand-built modals (portals, `fixed inset-0` layers) so they match.
  */
 
-/** Backdrop behind a modal. */
+/** Backdrop behind a modal, for the normal case (light page behind it). */
 export const MODAL_OVERLAY = "bg-white/10 backdrop-blur-xs";
+
+/**
+ * Backdrop behind a modal that opens over a dark section (e.g. a video
+ * preview). The glass panel's own `backdrop-filter` samples whatever paints
+ * behind it — the overlay — so at `MODAL_OVERLAY`'s 10% tint a dark section
+ * bleeds through and the panel's white glass turns muddy, dropping its text
+ * contrast. A stronger light scrim keeps the panel crisp regardless of what
+ * is behind it. Picked dynamically by `useDarkSurfaceBehind` — never set
+ * this as a page-level default; `globals.css`'s glass recipe is unchanged.
+ */
+export const MODAL_OVERLAY_OVER_DARK = "bg-white/70 backdrop-blur-xs";
 
 /** Panel shell of a modal (frosted glass, border and shadow from `.glass-dialog-panel`). */
 export const MODAL_PANEL = "glass-dialog-panel rounded-[26px]";

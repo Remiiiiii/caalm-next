@@ -1,7 +1,8 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as React from "react";
-import { MODAL_OVERLAY } from "@/lib/ui/modal-styles";
+import { useDarkSurfaceBehind } from "@/hooks/useDarkSurfaceBehind";
+import { MODAL_OVERLAY, MODAL_OVERLAY_OVER_DARK } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -15,17 +16,20 @@ const DialogClose = DialogPrimitive.Close;
 const DialogOverlay = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Overlay>,
 	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-	<DialogPrimitive.Overlay
-		ref={ref}
-		className={cn(
-			MODAL_OVERLAY,
-			"fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-			className,
-		)}
-		{...props}
-	/>
-));
+>(({ className, ...props }, ref) => {
+	const overDark = useDarkSurfaceBehind();
+	return (
+		<DialogPrimitive.Overlay
+			ref={ref}
+			className={cn(
+				overDark ? MODAL_OVERLAY_OVER_DARK : MODAL_OVERLAY,
+				"fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+				className,
+			)}
+			{...props}
+		/>
+	);
+});
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 type DialogContentProps = React.ComponentPropsWithoutRef<
