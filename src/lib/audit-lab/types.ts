@@ -53,6 +53,32 @@ export type SessionParticipant = {
 	role: SessionRole;
 };
 
+export const PARTICIPANT_CONNECTION_STATES = [
+	"invited",
+	"joined",
+	"left",
+] as const;
+
+export type ParticipantConnectionState =
+	(typeof PARTICIPANT_CONNECTION_STATES)[number];
+
+/** Live in-room roster row (`review_session_participants`) — distinct from the pre-call invite list in `ReviewSession.participantsJson`. */
+export type ReviewSessionParticipantRow = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId: string;
+	userId: string;
+	name?: string;
+	email?: string;
+	role: SessionRole;
+	connectionState: ParticipantConnectionState;
+	micOn?: boolean;
+	camOn?: boolean;
+	joinedAt?: string;
+	leftAt?: string;
+};
+
 export type ReviewSession = {
 	$id: string;
 	orgId: string;
@@ -90,6 +116,8 @@ export type ReviewQuestion = {
 	rubric?: string;
 	controlRef?: string;
 	createdByUserId: string;
+	/** Whether this item expects supporting documentation, not just a spoken answer. Rows created before this field existed fall back to inferring it from `rubric` text — see `requiresEvidenceFromRubric`. */
+	requiresEvidence?: boolean;
 };
 
 export type ReviewScript = {
@@ -127,9 +155,17 @@ export type ReviewAttempt = {
 	/** True when the browser published pitch-shifted mic audio. */
 	audioAnonymized?: boolean;
 	createdByUserId: string;
+	/** Rubric question the AI auditor is currently mid-asking; cleared once answered. */
+	currentQuestionId?: string;
+	/** Set while `status === "paused"`; cleared on resume. */
+	pausedAt?: string;
 };
 
-/** One turn of a voice interview, stored inside `ReviewAttempt.transcriptJson`. */
+/**
+ * One turn of a voice interview. Legacy attempts store these inside
+ * `ReviewAttempt.transcriptJson`; new attempts persist each as its own row in
+ * `review_transcript_turns` (see `ReviewTranscriptTurnRow`) instead.
+ */
 export type VoiceTranscriptTurn = {
 	questionId: string;
 	question: string;
@@ -137,6 +173,43 @@ export type VoiceTranscriptTurn = {
 	at: string;
 	citedEvidence?: string;
 	answerQuality?: "strong" | "adequate" | "weak";
+};
+
+export type InterviewLogEntryKind = "turn" | "attachment";
+export type AttachmentSource = "stage_drop" | "rubric_item" | "floating_widget";
+export type AttachmentStatus = "uploading" | "scanning" | "attached" | "failed";
+
+/**
+ * Durable per-entry row in the live-interview log (`review_transcript_turns`).
+ * Shares one table/one realtime subscription between spoken turns and evidence
+ * attachments so the two interleave as a single ordered log — distinguished by
+ * `kind` (rows written before this existed have no `kind` and are treated as
+ * `"turn"`). `questionId` doubles as an attachment's linked rubric item id.
+ */
+export type ReviewTranscriptTurnRow = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId: string;
+	kind?: InterviewLogEntryKind;
+	questionId?: string;
+	question?: string;
+	answer?: string;
+	citedEvidence?: string;
+	answerQuality?: "strong" | "adequate" | "weak";
+	at: string;
+	redacted?: boolean;
+	// Attachment-only fields:
+	fileId?: string;
+	fileName?: string;
+	mimeType?: string;
+	fileSize?: number;
+	uploaderName?: string;
+	source?: AttachmentSource;
+	replyToText?: string;
+	attachmentStatus?: AttachmentStatus;
+	progressPct?: number;
+	failureReason?: string;
 };
 
 export type ReviewGap = {

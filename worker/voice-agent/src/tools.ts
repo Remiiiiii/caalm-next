@@ -16,6 +16,8 @@ export type SessionUserData = {
 	covered: Set<string>;
 	currentQuestionId: string | null;
 	publishCoverage: (snapshot: CoverageSnapshot) => Promise<void>;
+	/** Flipped by the room-metadata listener in `agent.ts` when the facilitator pauses/resumes. */
+	paused: boolean;
 };
 
 /** Guardrail: reject a questionId the agent didn't actually get from the rubric. */
@@ -82,6 +84,9 @@ export function buildInterviewTools() {
 			parameters: recordResponseSchema,
 			execute: async (args, opts) => {
 				const userData = opts.ctx.userData;
+				if (userData.paused) {
+					return "The interview is paused right now. Wait silently — do not record this answer or ask another question until told to resume.";
+				}
 				const { rubric, attemptId, covered } = userData;
 				const item = requireRubricItem(rubric, args.questionId);
 				covered.add(args.questionId);
@@ -117,6 +122,9 @@ export function buildInterviewTools() {
 			parameters: flagClarificationSchema,
 			execute: async (args, opts) => {
 				const userData = opts.ctx.userData;
+				if (userData.paused) {
+					return "The interview is paused right now. Wait silently until told to resume.";
+				}
 				const { rubric } = userData;
 				requireRubricItem(rubric, args.questionId);
 				userData.currentQuestionId = args.questionId;
