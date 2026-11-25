@@ -38,6 +38,7 @@ type MemoryState = {
 	testRuns: Map<string, RoadmapTestRun>;
 	logs: Map<string, RoadmapStatusLog>;
 	seeded: boolean;
+	seededCatalogLength: number;
 };
 
 declare global {
@@ -56,6 +57,7 @@ function emptyMemory(): MemoryState {
 		testRuns: new Map(),
 		logs: new Map(),
 		seeded: false,
+		seededCatalogLength: 0,
 	};
 }
 
@@ -539,11 +541,23 @@ function ensureSeeded(
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): MemoryState {
 	const state = memory(catalogKey);
-	if (state.seeded) return state;
+	const catalogLength = catalogForKey(catalogKey).length;
+	// Re-seeding is a no-op for static catalogs (length never changes), but the
+	// Todo Roadmap's "generate section from a prompt" feature appends to its
+	// catalog at runtime — merge in rows for sections seeded for the first time,
+	// leaving every already-seeded row (and its live status) untouched.
+	if (state.seeded && catalogLength === state.seededCatalogLength) {
+		return state;
+	}
 	const seed = buildSeedSnapshot(catalogKey);
-	for (const s of seed.sections) state.sections.set(s.$id, s);
-	for (const t of seed.tasks) state.tasks.set(t.$id, t);
+	for (const s of seed.sections) {
+		if (!state.sections.has(s.$id)) state.sections.set(s.$id, s);
+	}
+	for (const t of seed.tasks) {
+		if (!state.tasks.has(t.$id)) state.tasks.set(t.$id, t);
+	}
 	state.seeded = true;
+	state.seededCatalogLength = catalogLength;
 	return state;
 }
 

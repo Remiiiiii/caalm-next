@@ -13,6 +13,8 @@ export type CoverageSnapshotItem = {
 	questionId: string;
 	prompt: string;
 	status: CoverageItemStatus;
+	/** Whether this item expects a supporting document — gates the attach control in the UI. */
+	requiresEvidence: boolean;
 };
 
 export type CoverageSnapshot = {
@@ -71,7 +73,11 @@ export function pickNextRubricItem<T extends RubricPickItem>(
 }
 
 export function buildCoverageSnapshot(params: {
-	rubric: Array<{ questionId: string; prompt: string }>;
+	rubric: Array<{
+		questionId: string;
+		prompt: string;
+		requiresEvidence?: boolean;
+	}>;
 	coveredIds: Iterable<string>;
 	currentQuestionId: string | null;
 }): CoverageSnapshot {
@@ -90,6 +96,7 @@ export function buildCoverageSnapshot(params: {
 			questionId: r.questionId,
 			prompt: r.prompt,
 			status,
+			requiresEvidence: r.requiresEvidence ?? false,
 		};
 	});
 	return {

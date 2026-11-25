@@ -10,6 +10,8 @@ import type {
 	ReviewReport,
 	ReviewScript,
 	ReviewSession,
+	ReviewSessionParticipantRow,
+	ReviewTranscriptTurnRow,
 	SessionStatus,
 } from "./types";
 
@@ -20,6 +22,36 @@ function dbId(): string {
 async function tables() {
 	const { tablesDB } = await createAdminClient();
 	return tablesDB;
+}
+
+/**
+ * Maps `users` collection row ids (what this app calls "userId" everywhere —
+ * roster rows, `createdByUserId`, etc.) to the real Appwrite auth account id.
+ * The two differ: Appwrite's realtime/permission system only ever recognizes
+ * `Role.user(accountId)`, so a permission grant built from the row id instead
+ * never matches the actual connected user. Falls back to the row id itself
+ * for any id with no matching row, so a lookup miss degrades to the (still
+ * broken, but no worse than before) previous behavior rather than throwing.
+ */
+export async function resolveAccountIds(
+	userIds: string[],
+): Promise<Map<string, string>> {
+	const unique = [...new Set(userIds)].filter(Boolean);
+	const map = new Map<string, string>(unique.map((id) => [id, id]));
+	if (unique.length === 0) return map;
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.usersCollectionId || "users",
+		queries: [Query.equal("$id", unique), Query.limit(unique.length)],
+	});
+	for (const row of result.rows as unknown as Array<{
+		$id: string;
+		accountId?: string;
+	}>) {
+		if (row.accountId) map.set(row.$id, row.accountId);
+	}
+	return map;
 }
 
 export async function createSessionRow(
@@ -231,6 +263,8 @@ export async function updateAttemptRow(
 			| "transcriptRedactedJson"
 			| "dataResidencyRegion"
 			| "audioAnonymized"
+			| "currentQuestionId"
+			| "pausedAt"
 		>
 	>,
 ): Promise<ReviewAttempt> {
@@ -407,6 +441,137 @@ export async function listReports(
 		queries,
 	});
 	return result.rows as unknown as ReviewReport[];
+}
+
+export async function createParticipantRow(
+	data: Omit<ReviewSessionParticipantRow, "$id">,
+	permissions: string[],
+): Promise<ReviewSessionParticipantRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		rowId: ID.unique(),
+		data,
+		permissions,
+	});
+	return row as unknown as ReviewSessionParticipantRow;
+}
+
+export async function findParticipantRow(
+	attemptId: string,
+	userId: string,
+): Promise<ReviewSessionParticipantRow | null> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		queries: [
+			Query.equal("attemptId", attemptId),
+			Query.equal("userId", userId),
+			Query.limit(1),
+		],
+	});
+	return (result.rows[0] as unknown as ReviewSessionParticipantRow) ?? null;
+}
+
+export async function listParticipantRows(
+	orgId: string,
+	attemptId: string,
+): Promise<ReviewSessionParticipantRow[]> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("attemptId", attemptId),
+			Query.limit(50),
+		],
+	});
+	return result.rows as unknown as ReviewSessionParticipantRow[];
+}
+
+export async function updateParticipantRow(
+	rowId: string,
+	data: Partial<
+		Pick<
+			ReviewSessionParticipantRow,
+			"connectionState" | "micOn" | "camOn" | "joinedAt" | "leftAt" | "role"
+		>
+	>,
+): Promise<ReviewSessionParticipantRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		rowId,
+		data,
+	});
+	return row as unknown as ReviewSessionParticipantRow;
+}
+
+export async function createTranscriptTurnRow(
+	data: Omit<ReviewTranscriptTurnRow, "$id">,
+	permissions?: string[],
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId: ID.unique(),
+		data,
+		...(permissions ? { permissions } : {}),
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function listTranscriptTurnRows(
+	orgId: string,
+	attemptId: string,
+): Promise<ReviewTranscriptTurnRow[]> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("attemptId", attemptId),
+			Query.orderAsc("$createdAt"),
+			Query.limit(1000),
+		],
+	});
+	return result.rows as unknown as ReviewTranscriptTurnRow[];
+}
+
+/** Attachment entries share `review_transcript_turns` with spoken turns (one log, one realtime subscription). */
+export async function createAttachmentRow(
+	data: Omit<ReviewTranscriptTurnRow, "$id">,
+	permissions?: string[],
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId: ID.unique(),
+		data,
+		...(permissions ? { permissions } : {}),
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function updateAttachmentRow(
+	rowId: string,
+	patch: Partial<ReviewTranscriptTurnRow>,
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId,
+		data: patch,
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
 }
 
 export type { SessionStatus };

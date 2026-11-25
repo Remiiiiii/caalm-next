@@ -616,6 +616,9 @@ importers:
       '@livekit/agents-plugin-synthesia':
         specifier: 1.10.1
         version: 1.10.1(@livekit/agents@1.10.1(@livekit/rtc-node@1.2.2)(@types/node@22.20.5)(supports-color@7.2.0)(typescript@5.9.3)(zod@4.3.6))(@livekit/rtc-node@1.2.2)
+      '@livekit/noise-cancellation-node':
+        specifier: 0.3.1
+        version: 0.3.1(@livekit/rtc-node@1.2.2)
       '@livekit/rtc-node':
         specifier: ^1.2.2
         version: 1.2.2
@@ -1630,6 +1633,36 @@ packages:
 
   '@livekit/mutex@1.1.1':
     resolution: {integrity: sha512-EsshAucklmpuUAfkABPxJNhzj9v2sG7JuzFDL4ML1oJQSV14sqrpTYnsaOudMAw9yOaW53NU3QQTlUQoRs4czw==}
+
+  '@livekit/noise-cancellation-darwin-arm64@0.3.1':
+    resolution: {integrity: sha512-w0Mrh3XY1wUsB93CLHxmRtzCLPtNi1iSZlIyCmyCqU+zDTajXm6f0YlzuApn3OpzVRkU4fMMToxPk9uGM4qMng==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@livekit/noise-cancellation-darwin-x64@0.3.1':
+    resolution: {integrity: sha512-pKIDy6CoBAV39E/A9rVIEfHEJELJIVwpVPH+eo0DJYvo1YlBkf7PX0+VYxxCU5g019RPFRtW2N4LBATtDmk2Tg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@livekit/noise-cancellation-linux-arm64@0.3.1':
+    resolution: {integrity: sha512-g7hgdHSnj6/kYjCPFGhWa8yzGZxll7PQVQ6fqkiucH+QzW+E0v81cV2Jm52cG9F+YvoVa59jQY7tt5jnM2A0QA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@livekit/noise-cancellation-linux-x64@0.3.1':
+    resolution: {integrity: sha512-M42kOATxjwQvKX0kvvyvW6GNh7jv4/BXNmORyYg3MW4y1Ld0C77l0s5eIQB5ttu4YHIAddbxIJ0gwnpzNQwZVg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@livekit/noise-cancellation-node@0.3.1':
+    resolution: {integrity: sha512-o4jBs8oDqKCjDK9iALldHDruwE56lrczrJHnND/EFiBRCNmQmrfc7mqEXjPbe5q6WX0mo2iUfQ2StAEUyU2bFQ==}
+    peerDependencies:
+      '@livekit/rtc-node': ^0.13.11 || ^1.0.0
+
+  '@livekit/noise-cancellation-win32-x64@0.3.1':
+    resolution: {integrity: sha512-5gRp+sh2sTNMrJOq8vnn/SP/Gzq6DFuv5y6NX94J192ceDyjizCdYZ9EFhZiLDKaGlxgRMtLUe4YG5YIPQscVg==}
+    cpu: [x64]
+    os: [win32]
 
   '@livekit/protocol@1.53.0':
     resolution: {integrity: sha512-dM562Q7sEQbJ9ZghjIpcVuRxRApGNwJW/JfXRub+dJT8J1cC2Tep0SyYkDzOawix7+0x969fnjXt0qEZOxkjbQ==}
@@ -7801,6 +7834,31 @@ snapshots:
       '@livekit/local-inference-win32-x64-msvc': 0.3.2
 
   '@livekit/mutex@1.1.1': {}
+
+  '@livekit/noise-cancellation-darwin-arm64@0.3.1':
+    optional: true
+
+  '@livekit/noise-cancellation-darwin-x64@0.3.1':
+    optional: true
+
+  '@livekit/noise-cancellation-linux-arm64@0.3.1':
+    optional: true
+
+  '@livekit/noise-cancellation-linux-x64@0.3.1':
+    optional: true
+
+  '@livekit/noise-cancellation-node@0.3.1(@livekit/rtc-node@1.2.2)':
+    dependencies:
+      '@livekit/rtc-node': 1.2.2
+    optionalDependencies:
+      '@livekit/noise-cancellation-darwin-arm64': 0.3.1
+      '@livekit/noise-cancellation-darwin-x64': 0.3.1
+      '@livekit/noise-cancellation-linux-arm64': 0.3.1
+      '@livekit/noise-cancellation-linux-x64': 0.3.1
+      '@livekit/noise-cancellation-win32-x64': 0.3.1
+
+  '@livekit/noise-cancellation-win32-x64@0.3.1':
+    optional: true
 
   '@livekit/protocol@1.53.0':
     dependencies:

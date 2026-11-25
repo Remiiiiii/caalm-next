@@ -307,6 +307,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				permission: PERMISSIONS.IT.VIEW_ROADMAP,
 			},
 			{
+				name: "Todo Roadmap",
+				icon: "clipboardCheck",
+				url: "/dashboard/it/development/todo-roadmap",
+				permission: PERMISSIONS.IT.VIEW_ROADMAP,
+			},
+			{
 				name: "PR log - (Cursor Cloud Agent)",
 				icon: "gitPullRequest",
 				url: "/dashboard/it/development/pr-log",
