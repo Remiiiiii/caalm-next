@@ -176,7 +176,11 @@ export type VoiceTranscriptTurn = {
 };
 
 export type InterviewLogEntryKind = "turn" | "attachment";
-export type AttachmentSource = "stage_drop" | "rubric_item" | "floating_widget";
+export type AttachmentSource =
+	| "stage_drop"
+	| "rubric_item"
+	| "floating_widget"
+	| "repository_pick";
 export type AttachmentStatus = "uploading" | "scanning" | "attached" | "failed";
 
 /**
