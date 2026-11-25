@@ -22,6 +22,31 @@ export async function uploadInterviewAttachment(
 	return { rowId: json.data.rowId };
 }
 
+/** Attaches a file already in the org's document repository (picked via the "send to interview" action on /documents etc.) instead of uploading bytes from the browser — the server fetches the file from storage itself. */
+export async function attachRepositoryFile(
+	attemptId: string,
+	fileId: string,
+	opts: { questionId?: string; replyToText?: string } = {},
+): Promise<{ rowId: string } | { error: string }> {
+	const res = await fetch(
+		`/api/audit-lab/practice/${attemptId}/attachments/from-repository`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				fileId,
+				questionId: opts.questionId,
+				replyToText: opts.replyToText,
+			}),
+		},
+	);
+	const json = await res.json().catch(() => ({}));
+	if (!res.ok || json?.error) {
+		return { error: json?.error ?? "Could not attach that file." };
+	}
+	return { rowId: json.data.rowId };
+}
+
 /** Retries a failed attachment in place (same row) with a re-picked file — covers both an upload failure (needs the bytes resent) and a scan failure (user may pick a different file). */
 export async function retryInterviewAttachment(
 	attemptId: string,
