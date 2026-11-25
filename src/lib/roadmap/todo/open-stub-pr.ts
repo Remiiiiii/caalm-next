@@ -33,9 +33,27 @@ export function parsePrNumberFromUrl(prUrl: string): number {
 	return Number(match[1]);
 }
 
-async function run(cmd: string, args: string[], cwd: string): Promise<string> {
-	const { stdout } = await execFileAsync(cmd, args, { cwd });
+async function run(
+	cmd: string,
+	args: string[],
+	cwd: string,
+	env?: NodeJS.ProcessEnv,
+): Promise<string> {
+	const { stdout } = await execFileAsync(cmd, args, { cwd, env });
 	return stdout.trim();
+}
+
+/**
+ * The roadmap feature sets GITHUB_TOKEN/ROADMAP_GITHUB_TOKEN in this server's
+ * env for read-only PR/check lookups (see github.ts). `gh` prefers an env
+ * token over the developer's own `gh auth login` session, and that token has
+ * no pull-request write scope — strip it so `gh pr create` uses the real one.
+ */
+function ghEnv(): NodeJS.ProcessEnv {
+	const env = { ...process.env };
+	delete env.GITHUB_TOKEN;
+	delete env.GH_TOKEN;
+	return env;
 }
 
 export async function openTodoStubPr(
@@ -51,6 +69,15 @@ export async function openTodoStubPr(
 	const body = buildTodoSectionPrBody(section);
 
 	await run("git", ["fetch", "origin", "main"], repoRoot);
+
+	// `git worktree remove` (in the finally block below) deletes the worktree
+	// but not the branch it created — a retry after an earlier failed attempt
+	// (e.g. a push that landed before `gh pr create` failed on an auth issue)
+	// must not collide with that leftover local or remote branch.
+	await run("git", ["branch", "-D", branch], repoRoot).catch(() => {});
+	await run("git", ["push", "origin", "--delete", branch], repoRoot).catch(
+		() => {},
+	);
 
 	const worktreeDir = await mkdtemp(path.join(tmpdir(), "caalm-todo-pr-"));
 	try {
@@ -96,6 +123,7 @@ export async function openTodoStubPr(
 				"--draft",
 			],
 			worktreeDir,
+			ghEnv(),
 		);
 
 		return parsePrNumberFromUrl(prUrl);
