@@ -1,10 +1,12 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@/components/Card";
 import FilesBulkBar from "@/components/FilesBulkBar";
+import FilesFolderTableView from "@/components/FilesFolderTableView";
 import FilesTableView from "@/components/FilesTableView";
 import {
 	FilesViewToggle,
@@ -12,6 +14,8 @@ import {
 } from "@/components/FilesViewToggle";
 import Sort from "@/components/Sort";
 import { PageIndex } from "@/components/ui/page-index";
+import { groupFilesByDepartment } from "@/lib/files/folder-groups";
+import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 
 const VIEW_STORAGE_KEY = "caalm-files-library-view";
@@ -33,13 +37,19 @@ export default function FilesLibraryClient({
 	user,
 }: FilesLibraryClientProps) {
 	const router = useRouter();
-	const [view, setView] = useState<FilesViewType>("card");
+	// New installs land on the folder table (this phase's primary surface);
+	// returning users keep whatever they last picked, read from storage below.
+	const [view, setView] = useState<FilesViewType>("folders");
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+		null,
+	);
+	const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
 
 	useEffect(() => {
 		const saved = localStorage.getItem(VIEW_STORAGE_KEY);
-		if (saved === "table" || saved === "card") {
+		if (saved === "table" || saved === "card" || saved === "folders") {
 			setView(saved);
 		}
 	}, []);
@@ -49,7 +59,28 @@ export default function FilesLibraryClient({
 		setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
 	}, [files]);
 
-	const totalPages = Math.max(1, Math.ceil(files.length / TABLE_PAGE_SIZE));
+	const folderGroups = useMemo(() => groupFilesByDepartment(files), [files]);
+
+	useEffect(() => {
+		const valid = new Set(folderGroups.map((g) => g.department));
+		setSelectedFolderIds((prev) => prev.filter((d) => valid.has(d)));
+		if (selectedDepartment && !valid.has(selectedDepartment)) {
+			setSelectedDepartment(null);
+		}
+	}, [folderGroups, selectedDepartment]);
+
+	/** The file list currently on screen: every file, or just one department's once drilled in via the folder view. */
+	const scopedFiles = useMemo(() => {
+		if (view !== "folders" || !selectedDepartment) return files;
+		return (
+			folderGroups.find((g) => g.department === selectedDepartment)?.files ?? []
+		);
+	}, [files, folderGroups, view, selectedDepartment]);
+
+	const totalPages = Math.max(
+		1,
+		Math.ceil(scopedFiles.length / TABLE_PAGE_SIZE),
+	);
 
 	const validCurrentPage = useMemo(
 		() => Math.min(Math.max(1, currentPage), totalPages),
@@ -64,20 +95,52 @@ export default function FilesLibraryClient({
 
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [files.length]);
+	}, [scopedFiles.length]);
 
 	const paginatedFiles = useMemo(() => {
 		const start = (validCurrentPage - 1) * TABLE_PAGE_SIZE;
-		return files.slice(start, start + TABLE_PAGE_SIZE);
-	}, [files, validCurrentPage]);
+		return scopedFiles.slice(start, start + TABLE_PAGE_SIZE);
+	}, [scopedFiles, validCurrentPage]);
 
 	const handleViewChange = useCallback((next: FilesViewType) => {
 		setView(next);
 		localStorage.setItem(VIEW_STORAGE_KEY, next);
 		setCurrentPage(1);
+		setSelectedDepartment(null);
 		if (next === "card") {
 			setSelectedIds([]);
 		}
+	}, []);
+
+	const openFolder = useCallback((department: string) => {
+		setSelectedDepartment(department);
+		setCurrentPage(1);
+		setSelectedIds([]);
+	}, []);
+
+	const backToFolders = useCallback(() => {
+		setSelectedDepartment(null);
+		setCurrentPage(1);
+		setSelectedIds([]);
+	}, []);
+
+	const toggleFolderSelected = useCallback((department: string) => {
+		setSelectedFolderIds((prev) =>
+			prev.includes(department)
+				? prev.filter((d) => d !== department)
+				: [...prev, department],
+		);
+	}, []);
+
+	const toggleFolderSelectAll = useCallback((departments: string[]) => {
+		setSelectedFolderIds((prev) => {
+			const allSelected =
+				departments.length > 0 && departments.every((d) => prev.includes(d));
+			if (allSelected) {
+				return prev.filter((d) => !departments.includes(d));
+			}
+			return Array.from(new Set([...prev, ...departments]));
+		});
 	}, []);
 
 	const toggleSelected = useCallback((id: string) => {
@@ -121,44 +184,68 @@ export default function FilesLibraryClient({
 				</div>
 			</section>
 
-			{files.length > 0 ? (
-				view === "table" ? (
-					<>
-						<section className="mb-6 w-full overflow-hidden rounded-lg border border-slate-200 bg-white/40 shadow-sm">
-							<FilesTableView
-								files={paginatedFiles}
-								selectedIds={selectedIds}
-								onToggleSelected={toggleSelected}
-								onToggleSelectAll={toggleSelectAll}
-								userRole={userRole}
-								onRefresh={onRefresh}
-							/>
+			{view === "folders" && !selectedDepartment ? (
+				<section className="mb-6 w-full overflow-hidden rounded-lg border border-slate-200 bg-white/40 shadow-sm">
+					<FilesFolderTableView
+						groups={folderGroups}
+						selectedDepartments={selectedFolderIds}
+						onToggleSelected={toggleFolderSelected}
+						onToggleSelectAll={toggleFolderSelectAll}
+						onOpenFolder={openFolder}
+					/>
+				</section>
+			) : scopedFiles.length > 0 ? (
+				<>
+					{view === "folders" && selectedDepartment && (
+						<button
+							type="button"
+							onClick={backToFolders}
+							className={cn(
+								"mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#078fab] hover:underline",
+							)}
+						>
+							<ChevronLeft className="h-4 w-4" aria-hidden />
+							All folders / {selectedDepartment}
+						</button>
+					)}
+					{view === "card" ? (
+						<section className="file-list mb-6">
+							{scopedFiles.map((file) => (
+								<Card
+									key={file.$id}
+									file={file}
+									status={file.status}
+									expirationDate={file.contractExpiryDate}
+									userRole={userRole}
+									onRefresh={onRefresh}
+								/>
+							))}
 						</section>
-						<PageIndex
-							className="mt-6 justify-center"
-							page={validCurrentPage}
-							totalItems={files.length}
-							pageSize={TABLE_PAGE_SIZE}
-							onPageChange={setCurrentPage}
-							hideWhenSinglePage
-							scrollToTop
-							aria-label="Files pagination"
-						/>
-					</>
-				) : (
-					<section className="file-list mb-6">
-						{files.map((file) => (
-							<Card
-								key={file.$id}
-								file={file}
-								status={file.status}
-								expirationDate={file.contractExpiryDate}
-								userRole={userRole}
-								onRefresh={onRefresh}
+					) : (
+						<>
+							<section className="mb-6 w-full overflow-hidden rounded-lg border border-slate-200 bg-white/40 shadow-sm">
+								<FilesTableView
+									files={paginatedFiles}
+									selectedIds={selectedIds}
+									onToggleSelected={toggleSelected}
+									onToggleSelectAll={toggleSelectAll}
+									userRole={userRole}
+									onRefresh={onRefresh}
+								/>
+							</section>
+							<PageIndex
+								className="mt-6 justify-center"
+								page={validCurrentPage}
+								totalItems={scopedFiles.length}
+								pageSize={TABLE_PAGE_SIZE}
+								onPageChange={setCurrentPage}
+								hideWhenSinglePage
+								scrollToTop
+								aria-label="Files pagination"
 							/>
-						))}
-					</section>
-				)
+						</>
+					)}
+				</>
 			) : (
 				<div className="flex flex-col items-center justify-center px-4 py-12 text-center">
 					<Image
@@ -168,13 +255,17 @@ export default function FilesLibraryClient({
 						height={250}
 						className="mx-auto mb-4 opacity-60"
 					/>
-					<p className="body-1 text-slate-700">{emptyMessage}</p>
+					<p className="body-1 text-slate-700">
+						{view === "folders" && selectedDepartment
+							? `No files in ${selectedDepartment} yet.`
+							: emptyMessage}
+					</p>
 				</div>
 			)}
 
-			{view === "table" && (
+			{(view === "table" || (view === "folders" && selectedDepartment)) && (
 				<FilesBulkBar
-					files={files}
+					files={scopedFiles}
 					selectedIds={selectedIds}
 					onClearSelection={clearSelection}
 				/>

@@ -1,9 +1,9 @@
 "use client";
 
-import { LayoutGrid, Table } from "lucide-react";
+import { Folder, LayoutGrid, Table } from "lucide-react";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 
-export type FilesViewType = "card" | "table";
+export type FilesViewType = "folders" | "card" | "table";
 
 interface FilesViewToggleProps {
 	view: FilesViewType;
@@ -17,6 +17,12 @@ export function FilesViewToggle({ view, onViewChange }: FilesViewToggleProps) {
 			onChange={onViewChange}
 			ariaLabel="File views"
 			tabs={[
+				{
+					value: "folders",
+					label: "Folder view",
+					icon: Folder,
+					hideLabel: true,
+				},
 				{
 					value: "card",
 					label: "Card view",
