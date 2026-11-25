@@ -128,7 +128,7 @@ export function buildClaudeTools(
 		mapped.push({
 			name: "request_input",
 			description:
-				'Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?} objects. Field types: text, date, time, select, textarea. For select fields, options must be an array of strings (e.g. ["meeting","review"]), never objects.',
+				'Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?,defaultValue?} objects. Field types: text, date, time, select, textarea. For select fields, options must be an array of strings (e.g. ["meeting","review"]), never objects. Set defaultValue to any value you already parsed from the user\'s message (e.g. a date like "2026-11-26", a time like "10:00", a select option) so the form opens pre-filled — only leave a field without defaultValue when it is genuinely missing from what the user said. Set required to false for optional fields instead of writing "(optional)" into the label — labels should never contain the word "optional".',
 			input_schema: {
 				type: "object" as const,
 				properties: {
@@ -190,7 +190,7 @@ export async function callClaudeAssistantTurn(params: {
 }): Promise<ClaudeTurnResult> {
 	const client = getClient();
 	const history = buildClaudeChatHistory(params.messages, params.userMessage);
-	// Sonnet 5.5 rejects tool_choice "any" / "tool" — use auto and nudge in the prompt.
+	// This model rejects tool_choice "any" / "tool" (400 invalid_request_error) — use auto and nudge in the prompt.
 	const system = params.forceTool
 		? `${params.systemInstruction}\n\nFor this request you must call exactly one of the provided tools. Do not reply with text only.`
 		: params.systemInstruction;

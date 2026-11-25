@@ -66,6 +66,7 @@ function RecordingPlayer({
 			preload="metadata"
 			playsInline
 			aria-label={label}
+			data-dark-surface
 			className="max-h-[32rem] w-full rounded-md border border-slate-200 bg-black"
 			src={playable}
 		/>

@@ -229,6 +229,23 @@ export async function listRecentlyClosedPullRequests(): Promise<
 	return prs;
 }
 
+/** Raw file contents at a ref via the Contents API, or null if missing/unreadable. */
+export async function fetchRepoFileAtRef(
+	filePath: string,
+	ref: string,
+): Promise<string | null> {
+	const repo = getRepo();
+	if (!repo.includes("/")) return null;
+	const [owner, name] = repo.split("/");
+	const res = await githubFetch(
+		`https://api.github.com/repos/${owner}/${name}/contents/${filePath}?ref=${encodeURIComponent(ref)}`,
+	);
+	if (!res?.ok) return null;
+	const json = (await res.json()) as { content?: string; encoding?: string };
+	if (!json.content || json.encoding !== "base64") return null;
+	return Buffer.from(json.content, "base64").toString("utf8");
+}
+
 export async function postPullRequestComment(params: {
 	prNumber: number;
 	body: string;

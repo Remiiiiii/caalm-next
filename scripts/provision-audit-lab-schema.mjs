@@ -158,6 +158,8 @@ const TABLES = [
 			},
 			{ key: "audioAnonymized", type: "boolean", required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
+			{ key: "currentQuestionId", type: "string", size: 64, required: false },
+			{ key: "pausedAt", type: "string", size: 64, required: false },
 		],
 		indexes: [
 			{
@@ -259,6 +261,104 @@ const TABLES = [
 			{ key: "orgId_kind", type: "key", attributes: ["orgId", "kind"] },
 		],
 	},
+	{
+		tableId: "69c4b201001f4e8c2109",
+		name: "review_session_participants",
+		rowSecurity: true,
+		columns: [
+			{ key: "orgId", type: "string", size: 64, required: true },
+			{ key: "sessionId", type: "string", size: 64, required: true },
+			{ key: "attemptId", type: "string", size: 64, required: true },
+			{ key: "userId", type: "string", size: 64, required: true },
+			{ key: "name", type: "string", size: 256, required: false },
+			{ key: "email", type: "string", size: 256, required: false },
+			{
+				key: "role",
+				type: "enum",
+				elements: ["facilitator", "mock_auditor", "interviewee", "observer"],
+				required: true,
+			},
+			{
+				key: "connectionState",
+				type: "enum",
+				elements: ["invited", "joined", "left"],
+				required: true,
+			},
+			{ key: "micOn", type: "boolean", required: false },
+			{ key: "camOn", type: "boolean", required: false },
+			{ key: "joinedAt", type: "string", size: 64, required: false },
+			{ key: "leftAt", type: "string", size: 64, required: false },
+		],
+		indexes: [
+			{
+				key: "orgId_attemptId",
+				type: "key",
+				attributes: ["orgId", "attemptId"],
+			},
+			{
+				key: "attemptId_userId",
+				type: "unique",
+				attributes: ["attemptId", "userId"],
+			},
+		],
+	},
+	{
+		tableId: "69c4b201001f4e8c210a",
+		name: "review_transcript_turns",
+		rowSecurity: true,
+		columns: [
+			{ key: "orgId", type: "string", size: 64, required: true },
+			{ key: "sessionId", type: "string", size: 64, required: true },
+			{ key: "attemptId", type: "string", size: 64, required: true },
+			{ key: "questionId", type: "string", size: 64, required: false },
+			{ key: "question", type: "string", size: 2000, required: false },
+			{ key: "answer", type: "longtext", required: false },
+			{ key: "citedEvidence", type: "string", size: 2000, required: false },
+			{
+				key: "answerQuality",
+				type: "enum",
+				elements: ["strong", "adequate", "weak"],
+				required: false,
+			},
+			{ key: "at", type: "string", size: 64, required: true },
+			{ key: "redacted", type: "boolean", required: false },
+			// Attachment entries share this table with spoken turns (one ordered log, one
+			// realtime subscription); old rows have no `kind` and are treated as "turn".
+			{
+				key: "kind",
+				type: "enum",
+				elements: ["turn", "attachment"],
+				required: false,
+			},
+			{ key: "fileId", type: "string", size: 64, required: false },
+			{ key: "fileName", type: "string", size: 512, required: false },
+			{ key: "mimeType", type: "string", size: 128, required: false },
+			{ key: "fileSize", type: "integer", required: false },
+			{ key: "uploaderName", type: "string", size: 128, required: false },
+			{
+				key: "source",
+				type: "enum",
+				elements: ["stage_drop", "rubric_item", "floating_widget"],
+				required: false,
+			},
+			{ key: "replyToText", type: "string", size: 2000, required: false },
+			{
+				key: "attachmentStatus",
+				type: "enum",
+				elements: ["uploading", "scanning", "attached", "failed"],
+				required: false,
+			},
+			{ key: "progressPct", type: "integer", required: false, min: 0, max: 100 },
+			{ key: "failureReason", type: "string", size: 500, required: false },
+		],
+		indexes: [
+			{
+				key: "orgId_attemptId",
+				type: "key",
+				attributes: ["orgId", "attemptId"],
+			},
+		],
+	},
 ];
 
 if (!PROJECT || !API_KEY) {
@@ -298,13 +398,15 @@ async function createTable(databaseId, table) {
 		body: {
 			tableId: table.tableId,
 			name: table.name,
-			permissions: [
-				'read("users")',
-				'create("users")',
-				'update("users")',
-				'delete("users")',
-			],
-			rowSecurity: false,
+			permissions: table.rowSecurity
+				? ['create("users")']
+				: [
+						'read("users")',
+						'create("users")',
+						'update("users")',
+						'delete("users")',
+					],
+			rowSecurity: Boolean(table.rowSecurity),
 			enabled: true,
 		},
 	});
@@ -422,6 +524,6 @@ if (INCLUDE_DEMO) await provisionDatabase(DEMO_DB);
 
 console.log(
 	APPLY
-		? "\nDone. Config fallbacks already use 69c4b201001f4e8c2101–2108."
+		? "\nDone. Config fallbacks already use 69c4b201001f4e8c2101–210a."
 		: "\nDry run only. Re-run with --apply to create tables.",
 );

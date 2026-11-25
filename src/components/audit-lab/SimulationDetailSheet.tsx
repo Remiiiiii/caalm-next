@@ -1,17 +1,12 @@
 "use client";
 
-import {
-	ArrowRight,
-	Bot,
-	CalendarClock,
-	ClipboardList,
-} from "lucide-react";
+import { ArrowRight, Bot, CalendarClock, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
+import { CAALM_BADGE_BASE } from "@/components/tasks/task-ui";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { CAALM_BADGE_BASE } from "@/components/tasks/task-ui";
 import {
 	parseParticipants,
 	type ReviewSession,
@@ -85,8 +80,7 @@ function PersonRow({
 	participant: SessionParticipant;
 	profile?: SimulationSheetProfile;
 }) {
-	const fullName =
-		profile?.name || participant.name?.trim() || "Participant";
+	const fullName = profile?.name || participant.name?.trim() || "Participant";
 	const department = profile?.department?.trim();
 	const division = profile?.division?.trim();
 	const meta = [department, division].filter(Boolean).join(" · ");
@@ -113,9 +107,7 @@ function PersonRow({
 
 function MockAuditorRow({ participant }: { participant: SessionParticipant }) {
 	const raw =
-		participant.name?.trim() ||
-		participant.email?.trim() ||
-		"by_the_book";
+		participant.name?.trim() || participant.email?.trim() || "by_the_book";
 	const persona =
 		PERSONA_LABEL[raw] ||
 		PERSONA_LABEL[raw.toLowerCase().replace(/\s+/g, "_")] ||
@@ -205,7 +197,11 @@ export function SimulationDetailSheet({
 							Reschedule
 						</Button>
 					) : null}
-					<Button type="button" className="btn-primary flex-1 cursor-pointer gap-1.5" asChild>
+					<Button
+						type="button"
+						className="btn-primary flex-1 cursor-pointer gap-1.5"
+						asChild
+					>
 						<Link
 							href={`/audit-lab/interview?sessionId=${session.$id}`}
 							onClick={() => onOpenChange(false)}
