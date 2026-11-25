@@ -112,6 +112,7 @@
 	"permissions": {
 		"allow": [
 			"mcp__graft__*",
+			"mcp__caveman__*",
 			"Bash(trail:*)",
 			"Bash(graft:*)",
 			"Bash(npx graft:*)",

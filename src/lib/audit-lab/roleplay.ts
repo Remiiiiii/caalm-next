@@ -20,6 +20,8 @@ export const INTERVIEWER_PROFILES: Record<
 		imgPosition?: string;
 		/** Zoom multiplier applied around imgPosition; use when the face only fills a small part of the source frame. */
 		imgScale?: number;
+		/** Voice-call backend for this persona. Unset (default) = the LiveKit room + worker/voice-agent pipeline. "nuance" = Nuance Live (see src/lib/audit-lab/voice/nuance.ts) — Simone and Valentina only. */
+		backend?: "nuance";
 	}
 > = {
 	by_the_book: {
@@ -39,12 +41,14 @@ export const INTERVIEWER_PROFILES: Record<
 		label: "Friendly collegiate",
 		img: "/assets/images/interviewers/simone.jpg",
 		desc: "Simone keeps the conversation relaxed and encouraging, but still checks every control. If evidence is thin she nudges for more rather than pushing back hard, treating a wrong answer as a chance to walk through it together.",
+		backend: "nuance",
 	},
 	forensic: {
 		name: "Valentina",
 		label: "Forensic",
 		img: "/assets/images/interviewers/valentina.jpg",
 		desc: "Valentina looks for gaps between the stated process and the evidence in front of her. Expect follow-up questions for exact dates, system names, and anything that sounds like a vague timeline.",
+		backend: "nuance",
 	},
 };
 

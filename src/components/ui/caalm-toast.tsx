@@ -242,7 +242,7 @@ export function AttributionToast({
 						}}
 					>
 						<Image
-							src="/assets/images/toast-bot.png"
+							src="/assets/images/caalm-bot-bust.svg"
 							alt=""
 							width={34}
 							height={34}
@@ -309,7 +309,7 @@ function AgentRing({ state }: { state: WorkingState }) {
 			{/* core circle */}
 			<div className="absolute inset-[5px] flex items-center justify-center rounded-full border border-slate-200 bg-white">
 				<Image
-					src="/assets/images/toast-bot.png"
+					src="/assets/images/caalm-bot-bust.svg"
 					alt=""
 					width={26}
 					height={26}

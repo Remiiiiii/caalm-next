@@ -187,8 +187,8 @@ export function scheduleEventForm(
 			name: "description",
 			label: "Agenda",
 			type: "textarea",
-			placeholder: "Optional",
-			required: false,
+			placeholder: "What is this meeting about?",
+			required: true,
 			defaultValue: defaults?.description,
 		},
 		{
@@ -361,6 +361,26 @@ export function formFromQuizText(
 	return scheduleEventForm();
 }
 
+/** schedule_event fields the model sometimes over-labels "(optional)" instead of using `required`. */
+const SCHEDULE_FIELD_NAMES_TO_DELABEL = new Set(["description", "participants"]);
+/** Only participants is genuinely optional; the model sometimes marks it required instead. */
+const OPTIONAL_SCHEDULE_FIELD_NAMES = new Set(["participants"]);
+
+function normalizeScheduleEventFields(
+	fields: AssistantFormField[],
+): AssistantFormField[] {
+	return fields.map((field) => {
+		if (!SCHEDULE_FIELD_NAMES_TO_DELABEL.has(field.name)) return field;
+		return {
+			...field,
+			label: field.label.replace(/\s*\(optional\)\s*$/i, ""),
+			required: OPTIONAL_SCHEDULE_FIELD_NAMES.has(field.name)
+				? false
+				: field.required,
+		};
+	});
+}
+
 export function resolveInputForm(params: {
 	intent?: string;
 	intro?: string;
@@ -375,6 +395,9 @@ export function resolveInputForm(params: {
 		fields = inviteUsersForm().fields;
 	}
 	if (!fields.length) return null;
+	if (intent === "schedule_event") {
+		fields = normalizeScheduleEventFields(fields);
+	}
 	return {
 		intro: (params.intro ?? "Fill this in:").trim() || "Fill this in:",
 		form: { intent, fields },
