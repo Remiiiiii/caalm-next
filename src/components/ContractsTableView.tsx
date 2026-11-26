@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SendToInterviewButton } from "@/components/audit-lab/SendToInterviewButton";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import {
@@ -708,7 +709,17 @@ export default function ContractsTableView({
 							className={cn(rowPad, "text-right")}
 							onClick={(e) => e.stopPropagation()}
 						>
-							<div className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}>
+							<div
+								className={cn(
+									"inline-flex items-center justify-end gap-1",
+									DATA_TABLE_ACTIONS_TRIGGER,
+								)}
+							>
+								<SendToInterviewButton
+									fileId={file.$id}
+									fileName={file.contractName || file.name}
+									recordKind="contract"
+								/>
 								<ActionDropdown
 									file={file}
 									onStatusChange={onRefresh}

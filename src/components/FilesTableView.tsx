@@ -149,7 +149,11 @@ export default function FilesTableView({
 									DATA_TABLE_ACTIONS_TRIGGER,
 								)}
 							>
-								<SendToInterviewButton file={file} />
+								<SendToInterviewButton
+									fileId={file.$id}
+									fileName={file.name}
+									recordKind={file.contractId ? "contract" : "file"}
+								/>
 								<ActionDropdown
 									file={file}
 									userRole={userRole}

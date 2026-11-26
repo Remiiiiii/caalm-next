@@ -9,6 +9,7 @@ import {
 import {
 	loadRepositoryFileForOrg,
 	RepositoryFileAccessError,
+	type RepositoryRecordKind,
 } from "@/lib/audit-upload/repository-file";
 import { runAttachmentUpload } from "@/lib/audit-upload/run-attachment-upload";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
@@ -16,12 +17,14 @@ import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
  * Attaches a file already in the org's document repository to a live
- * interview — the "send to interview" action on /documents (and every
- * other /[type] file route) posts here instead of through the drag/drop
- * upload route. Copies the file's current bytes into a fresh attachment
- * row rather than linking the repository row live, so the interview's
- * evidence stays a frozen version even if the source file is later
- * edited or removed.
+ * interview — the "send to interview" action on /documents, /contracts and
+ * /licenses posts here instead of through the drag/drop upload route.
+ * `recordKind` says which collection `fileId` names (a generic upload, a
+ * contract, or a license); each is resolved to its stored bytes by
+ * `loadRepositoryFileForOrg`. Copies the bytes into a fresh attachment row
+ * rather than linking the repository row live, so the interview's evidence
+ * stays a frozen version even if the source record is later edited or
+ * removed.
  */
 export async function POST(
 	request: NextRequest,
@@ -42,9 +45,12 @@ export async function POST(
 
 	const { attemptId } = await context.params;
 
+	const RECORD_KINDS: RepositoryRecordKind[] = ["file", "contract", "license"];
+
 	try {
 		const body = (await request.json().catch(() => ({}))) as {
 			fileId?: string;
+			recordKind?: string;
 			questionId?: string;
 			replyToText?: string;
 		};
@@ -55,10 +61,16 @@ export async function POST(
 				{ status: 400 },
 			);
 		}
+		const recordKind = RECORD_KINDS.includes(
+			body.recordKind as RepositoryRecordKind,
+		)
+			? (body.recordKind as RepositoryRecordKind)
+			: "file";
 
 		const { buffer, name, type } = await loadRepositoryFileForOrg(
 			fileId,
 			resolved.actor.orgId,
+			recordKind,
 		);
 		const file = new File([new Uint8Array(buffer)], name, { type });
 		assertInterviewEvidenceFile(file);

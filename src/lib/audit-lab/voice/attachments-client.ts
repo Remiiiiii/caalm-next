@@ -22,11 +22,18 @@ export async function uploadInterviewAttachment(
 	return { rowId: json.data.rowId };
 }
 
-/** Attaches a file already in the org's document repository (picked via the "send to interview" action on /documents etc.) instead of uploading bytes from the browser — the server fetches the file from storage itself. */
+/** Which collection a "send to interview" pick came from — see `RepositoryRecordKind` server-side. */
+export type RepositoryRecordKind = "file" | "contract" | "license";
+
+/** Attaches a file already in the org's document repository (picked via the "send to interview" action on /documents, /contracts or /licenses) instead of uploading bytes from the browser — the server fetches the record from storage itself. */
 export async function attachRepositoryFile(
 	attemptId: string,
 	fileId: string,
-	opts: { questionId?: string; replyToText?: string } = {},
+	opts: {
+		recordKind?: RepositoryRecordKind;
+		questionId?: string;
+		replyToText?: string;
+	} = {},
 ): Promise<{ rowId: string } | { error: string }> {
 	const res = await fetch(
 		`/api/audit-lab/practice/${attemptId}/attachments/from-repository`,
@@ -35,6 +42,7 @@ export async function attachRepositoryFile(
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				fileId,
+				recordKind: opts.recordKind ?? "file",
 				questionId: opts.questionId,
 				replyToText: opts.replyToText,
 			}),
