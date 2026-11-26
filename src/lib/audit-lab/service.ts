@@ -76,6 +76,7 @@ import {
 	writeSimulationPhaseToTrail,
 } from "./simulation-phase";
 import {
+	type AttachmentSource,
 	EVIDENCE_STATUSES,
 	type EvidenceStatus,
 	parseParticipants,
@@ -1282,7 +1283,7 @@ export async function startAttachment(
 		fileName: string;
 		mimeType: string;
 		fileSize: number;
-		source: "stage_drop" | "rubric_item" | "floating_widget";
+		source: AttachmentSource;
 		questionId?: string;
 		replyToText?: string;
 	},

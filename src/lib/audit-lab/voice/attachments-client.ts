@@ -22,6 +22,39 @@ export async function uploadInterviewAttachment(
 	return { rowId: json.data.rowId };
 }
 
+/** Which collection a "send to interview" pick came from — see `RepositoryRecordKind` server-side. */
+export type RepositoryRecordKind = "file" | "contract" | "license";
+
+/** Attaches a file already in the org's document repository (picked via the "send to interview" action on /documents, /contracts or /licenses) instead of uploading bytes from the browser — the server fetches the record from storage itself. */
+export async function attachRepositoryFile(
+	attemptId: string,
+	fileId: string,
+	opts: {
+		recordKind?: RepositoryRecordKind;
+		questionId?: string;
+		replyToText?: string;
+	} = {},
+): Promise<{ rowId: string } | { error: string }> {
+	const res = await fetch(
+		`/api/audit-lab/practice/${attemptId}/attachments/from-repository`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				fileId,
+				recordKind: opts.recordKind ?? "file",
+				questionId: opts.questionId,
+				replyToText: opts.replyToText,
+			}),
+		},
+	);
+	const json = await res.json().catch(() => ({}));
+	if (!res.ok || json?.error) {
+		return { error: json?.error ?? "Could not attach that file." };
+	}
+	return { rowId: json.data.rowId };
+}
+
 /** Retries a failed attachment in place (same row) with a re-picked file — covers both an upload failure (needs the bytes resent) and a scan failure (user may pick a different file). */
 export async function retryInterviewAttachment(
 	attemptId: string,

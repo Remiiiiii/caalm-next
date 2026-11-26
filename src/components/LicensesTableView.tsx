@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SendToInterviewButton } from "@/components/audit-lab/SendToInterviewButton";
 import { useLicensesView } from "@/components/LicensesView";
 import {
 	CaalmDataTable,
@@ -570,7 +571,17 @@ export default function LicensesTableView({
 							className="py-4 text-right"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<div className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}>
+							<div
+								className={cn(
+									"inline-flex items-center justify-end gap-1",
+									DATA_TABLE_ACTIONS_TRIGGER,
+								)}
+							>
+								<SendToInterviewButton
+									fileId={license.$id}
+									fileName={license.licenseName}
+									recordKind="license"
+								/>
 								<LicenseActionDropdown
 									license={license}
 									onRefresh={onRefresh}

@@ -42,6 +42,8 @@ import type {
 } from "@/lib/audit-lab/types";
 import { createAnonymizedMicStream } from "@/lib/audit-lab/voice/anonymize-audio";
 import {
+	attachRepositoryFile,
+	type RepositoryRecordKind,
 	retryInterviewAttachment,
 	uploadInterviewAttachment,
 } from "@/lib/audit-lab/voice/attachments-client";
@@ -142,6 +144,13 @@ type AuditLabCallContextValue = {
 	attachFile: (
 		file: File,
 		source: AttachmentSource,
+		questionId?: string,
+		replyToText?: string,
+	) => Promise<void>;
+	/** Attaches a file already in the org's document repository — the "send to interview" action on /documents, /contracts and /licenses. */
+	attachExistingFile: (
+		fileId: string,
+		recordKind?: RepositoryRecordKind,
 		questionId?: string,
 		replyToText?: string,
 	) => Promise<void>;
@@ -943,6 +952,27 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 		}
 	}
 
+	async function attachExistingFile(
+		fileId: string,
+		recordKind?: RepositoryRecordKind,
+		questionId?: string,
+		replyToText?: string,
+	) {
+		if (!attemptIdRef.current) return;
+		const result = await attachRepositoryFile(attemptIdRef.current, fileId, {
+			recordKind,
+			questionId,
+			replyToText,
+		});
+		if ("error" in result) {
+			toast({
+				title: "Attachment",
+				description: result.error,
+				variant: "destructive",
+			});
+		}
+	}
+
 	async function retryAttachment(turn: TranscriptTurn, file: File) {
 		if (!attemptIdRef.current || !turn.$id) return;
 		const result = await retryInterviewAttachment(
@@ -991,6 +1021,7 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 				registerLocalVideoEl,
 				registerRemoteVideoEl,
 				attachFile,
+				attachExistingFile,
 				retryAttachment,
 			}}
 		>

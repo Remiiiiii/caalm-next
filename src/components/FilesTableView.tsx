@@ -1,5 +1,6 @@
 "use client";
 
+import { SendToInterviewButton } from "@/components/audit-lab/SendToInterviewButton";
 import {
 	CaalmDataTable,
 	DATA_TABLE_ACTIONS_HEAD,
@@ -143,8 +144,16 @@ export default function FilesTableView({
 							onClick={(e) => e.stopPropagation()}
 						>
 							<div
-								className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}
+								className={cn(
+									"inline-flex items-center justify-end gap-1",
+									DATA_TABLE_ACTIONS_TRIGGER,
+								)}
 							>
+								<SendToInterviewButton
+									fileId={file.$id}
+									fileName={file.name}
+									recordKind={file.contractId ? "contract" : "file"}
+								/>
 								<ActionDropdown
 									file={file}
 									userRole={userRole}
