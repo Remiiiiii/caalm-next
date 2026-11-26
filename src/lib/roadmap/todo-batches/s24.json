@@ -1,0 +1,12 @@
+{
+  "title": "Toast Icon Audit and Correction",
+  "sourceRef": "Generated from a prompt on the Todo Roadmap page",
+  "description": "Who: The AI agent, reviewed by the developer who owns the dashboard UI. What: Scan every toast in the dashboard, produce a table listing each toast's current icon next to its context (e.g. success, error, warning, info, delete confirmation), then add a recommended icon column and update the code so each toast uses its recommended icon instead of the default trash icon. Where: The toast component and every place in the dashboard codebase that triggers a toast. Why: Some toasts fall back to a trash icon that does not fit their message, which confuses users about what the notification means. When: Run the audit first and share the table for review; apply the icon changes only after the developer approves the recommended icons. How: Search the codebase for all toast calls and the default icon setting, record toast name, file location, message, context, and current icon in a table, add a recommended icon and a one-line reason for each row, then update the code to match the approved table and re-share the final table.",
+  "acceptanceCriteria": [
+    "The agent delivers a table covering every toast in the codebase with columns for toast name or location, message/context, and current icon.",
+    "The table includes a recommended icon column with a short reason for each row, and the final version matches what is implemented in code.",
+    "No toast other than an actual delete confirmation displays a trash icon.",
+    "Each toast's icon is visually verified in the running dashboard and matches its context (success, error, warning, info, or delete)."
+  ],
+  "testSuiteRef": "tests/roadmap/todo/24-1.test.ts"
+}
