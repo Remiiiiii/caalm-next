@@ -53,6 +53,32 @@ export type SessionParticipant = {
 	role: SessionRole;
 };
 
+export const PARTICIPANT_CONNECTION_STATES = [
+	"invited",
+	"joined",
+	"left",
+] as const;
+
+export type ParticipantConnectionState =
+	(typeof PARTICIPANT_CONNECTION_STATES)[number];
+
+/** Live in-room roster row (`review_session_participants`) — distinct from the pre-call invite list in `ReviewSession.participantsJson`. */
+export type ReviewSessionParticipantRow = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId: string;
+	userId: string;
+	name?: string;
+	email?: string;
+	role: SessionRole;
+	connectionState: ParticipantConnectionState;
+	micOn?: boolean;
+	camOn?: boolean;
+	joinedAt?: string;
+	leftAt?: string;
+};
+
 export type ReviewSession = {
 	$id: string;
 	orgId: string;
@@ -88,8 +114,11 @@ export type ReviewQuestion = {
 	sourceFindingId?: string;
 	difficulty: string;
 	rubric?: string;
+	/** For matrix-generated questions, holds the real `AuditEvidenceMapRow.requirementId` (e.g. "CW-PROVIDER-CONTRACT") rather than a SOC2 stub code — the field already threads end-to-end into the voice rubric and the LiveKit worker, so no separate join-key column was added. */
 	controlRef?: string;
 	createdByUserId: string;
+	/** Whether this item expects supporting documentation, not just a spoken answer. Rows created before this field existed fall back to inferring it from `rubric` text — see `requiresEvidenceFromRubric`. */
+	requiresEvidence?: boolean;
 };
 
 export type ReviewScript = {
@@ -127,9 +156,17 @@ export type ReviewAttempt = {
 	/** True when the browser published pitch-shifted mic audio. */
 	audioAnonymized?: boolean;
 	createdByUserId: string;
+	/** Rubric question the AI auditor is currently mid-asking; cleared once answered. */
+	currentQuestionId?: string;
+	/** Set while `status === "paused"`; cleared on resume. */
+	pausedAt?: string;
 };
 
-/** One turn of a voice interview, stored inside `ReviewAttempt.transcriptJson`. */
+/**
+ * One turn of a voice interview. Legacy attempts store these inside
+ * `ReviewAttempt.transcriptJson`; new attempts persist each as its own row in
+ * `review_transcript_turns` (see `ReviewTranscriptTurnRow`) instead.
+ */
 export type VoiceTranscriptTurn = {
 	questionId: string;
 	question: string;
@@ -139,6 +176,49 @@ export type VoiceTranscriptTurn = {
 	answerQuality?: "strong" | "adequate" | "weak";
 };
 
+export type InterviewLogEntryKind = "turn" | "attachment";
+export type AttachmentSource = "stage_drop" | "rubric_item" | "floating_widget";
+export type AttachmentStatus = "uploading" | "scanning" | "attached" | "failed";
+
+/**
+ * Durable per-entry row in the live-interview log (`review_transcript_turns`).
+ * Shares one table/one realtime subscription between spoken turns and evidence
+ * attachments so the two interleave as a single ordered log — distinguished by
+ * `kind` (rows written before this existed have no `kind` and are treated as
+ * `"turn"`). `questionId` doubles as an attachment's linked rubric item id.
+ */
+export type ReviewTranscriptTurnRow = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId: string;
+	kind?: InterviewLogEntryKind;
+	questionId?: string;
+	question?: string;
+	answer?: string;
+	citedEvidence?: string;
+	answerQuality?: "strong" | "adequate" | "weak";
+	at: string;
+	redacted?: boolean;
+	// Attachment-only fields:
+	fileId?: string;
+	fileName?: string;
+	mimeType?: string;
+	fileSize?: number;
+	uploaderName?: string;
+	source?: AttachmentSource;
+	replyToText?: string;
+	attachmentStatus?: AttachmentStatus;
+	progressPct?: number;
+	failureReason?: string;
+};
+
+/**
+ * `description` carries a `"[requirement:<requirementId>] "` prefix for gaps
+ * traced back to an evidence-map requirement — see `src/lib/audit-lab/findings.ts`
+ * for the format helpers. Gaps raised outside that flow (the legacy `scoreAnswer`
+ * path) have no prefix and `gapRequirementId()` returns `undefined` for them.
+ */
 export type ReviewGap = {
 	$id: string;
 	orgId: string;
@@ -149,11 +229,27 @@ export type ReviewGap = {
 	status: string;
 };
 
+export const EVIDENCE_TEST_RESULTS = [
+	"not_tested",
+	"no_exception",
+	"exception",
+	"deficiency",
+] as const;
+
+/**
+ * Whether the control passed, independent of `EvidenceStatus` (whether the
+ * proof has been collected/accepted). Keeping these as two separate fields
+ * avoids conflating "we accepted this file" with "the control passed" — the
+ * most common evidence-matrix modeling mistake.
+ */
+export type EvidenceTestResult = (typeof EVIDENCE_TEST_RESULTS)[number];
+
 export type EvidenceRequest = {
 	$id: string;
 	orgId: string;
 	sessionId: string;
 	title: string;
+	/** For matrix-generated requests, holds the real requirementId — see the matching comment on `ReviewQuestion.controlRef`. */
 	controlRef?: string;
 	department?: string;
 	ownerUserId?: string;
@@ -162,6 +258,7 @@ export type EvidenceRequest = {
 	status: EvidenceStatus;
 	dueAt?: string;
 	sensitive?: boolean;
+	testResult?: EvidenceTestResult;
 };
 
 export type ReviewReport = {
@@ -171,6 +268,47 @@ export type ReviewReport = {
 	kind: string;
 	bodyJson: string;
 	createdByUserId: string;
+};
+
+export type EvidenceItemSource =
+	| "interview_attachment"
+	| "direct_upload"
+	| "existing_record";
+
+/** One evidence file (or existing-record reference), independent of which requirement(s) it supports — see `AuditLabEvidenceLink` for the many-to-many join. */
+export type AuditLabEvidenceItem = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	fileId?: string;
+	fileName?: string;
+	mimeType?: string;
+	fileSize?: number;
+	sha256?: string;
+	source: EvidenceItemSource;
+	/** For `source: "existing_record"` — e.g. a contract/license $id already tagged on the readiness evidence map. */
+	existingRecordRef?: string;
+	uploaderUserId?: string;
+};
+
+export type EvidenceLinkType = "documentary" | "testimonial" | "observational";
+export type EvidenceLinkRelation = "supports" | "contradicts";
+
+/** Joins one evidence item to one requirement, optionally tracing back to the exact request/attempt/transcript turn it came from. `itemId` is unset for a pure testimonial link — a spoken claim with no file behind it yet, traced via `transcriptTurnId` instead. */
+export type AuditLabEvidenceLink = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	itemId?: string;
+	requirementId: string;
+	requestId?: string;
+	attemptId?: string;
+	transcriptTurnId?: string;
+	evidenceType: EvidenceLinkType;
+	relation: EvidenceLinkRelation;
+	/** True until a reviewer confirms a link the system inferred (e.g. from `citedEvidence` text) rather than one a person explicitly attached. */
+	aiSuggested?: boolean;
+	confirmedByUserId?: string;
 };
 
 export function parseParticipants(

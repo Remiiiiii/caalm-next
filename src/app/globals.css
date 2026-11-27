@@ -412,7 +412,6 @@
 	.glass-form-control {
 		background: rgba(255, 255, 255, 0.3);
 		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
 		/* Visible slate-300 hairline; slate-200 disappears on bg-slate-50 */
 		border: 0.25px solid #cbd5e1;
 		padding-left: 0.75rem;
@@ -469,7 +468,6 @@
 	.glass-dialog-panel {
 		background: rgba(255, 255, 255, 0.45);
 		backdrop-filter: blur(24px);
-		-webkit-backdrop-filter: blur(24px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
 	}
@@ -523,7 +521,6 @@
 		@apply space-y-4 w-full max-w-[min(95vw,28rem)] overflow-hidden rounded-[26px] px-4 md:px-8 py-10 outline-hidden;
 		background: rgba(255, 255, 255, 0.45);
 		backdrop-filter: blur(24px);
-		-webkit-backdrop-filter: blur(24px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
 	}
@@ -813,7 +810,6 @@
 		@apply flex cursor-pointer flex-col gap-6 rounded-[18px] text-slate-700 p-5 transition-all mt-6;
 		background: rgba(255, 255, 255, 0.1);
 		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 	}
@@ -829,7 +825,6 @@
 		@apply relative rounded-lg overflow-hidden transition-all duration-200;
 		background: rgba(255, 255, 255, 0.55);
 		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 	}
@@ -884,7 +879,6 @@
 		@apply rounded-lg p-3;
 		background: rgba(255, 255, 255, 0.3);
 		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.5);
 	}
 
@@ -899,7 +893,6 @@
 		border-radius: 1.5rem;
 		background: rgba(255, 255, 255, 0.55);
 		backdrop-filter: blur(18px);
-		-webkit-backdrop-filter: blur(18px);
 		border: 1px solid rgba(255, 255, 255, 0.42);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
 	}
@@ -917,7 +910,6 @@
 	.sidebar-flyout-frost {
 		background: rgba(255, 255, 255, 0.82);
 		backdrop-filter: blur(24px) saturate(1.35);
-		-webkit-backdrop-filter: blur(24px) saturate(1.35);
 		border: 1px solid rgba(255, 255, 255, 0.7);
 		box-shadow:
 			0 8px 32px 0 rgba(31, 38, 135, 0.12),
@@ -2484,7 +2476,6 @@ iframe[src*="splinecode"] {
 	border-radius: 0.75rem;
 	background: transparent;
 	backdrop-filter: none;
-	-webkit-backdrop-filter: none;
 	border: 1px solid rgba(255, 255, 255, 0.55);
 	box-shadow:
 		0 8px 32px 0 rgba(31, 38, 135, 0.12),
@@ -2501,7 +2492,6 @@ iframe[src*="splinecode"] {
 	background: rgba(214, 215, 216, 0.35);
 	opacity: 1;
 	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
 }
 
 /* Soft brand wash — matches Book a call card tint, full-bleed sections */
@@ -2994,4 +2984,556 @@ iframe[src*="splinecode"] {
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-gutter: stable;
+}
+
+/**
+ * Voice call dark theme — the one screen in the app with its own cinematic
+ * (Zoom-style) design language, separate from CAALM's light glass-card
+ * system used everywhere else. Scoped entirely under these classes so it
+ * never leaks into the rest of the app.
+ *
+ * Tokens below follow the Audit Lab "Live Interview Window" design system:
+ * near-monochrome dark surface, one reserved teal accent (#078fab / #6fe0f5)
+ * carrying meaning (status, progress, current emphasis), green/amber/red
+ * reserved for the three live-session statuses only. Poppins throughout.
+ */
+@keyframes voiceCallOverlayIn {
+	from {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes voiceCallLiveDotPulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
+.voice-call-shell {
+	position: relative;
+	overflow: hidden;
+	border-radius: 1.25rem;
+	background: radial-gradient(
+		ellipse 140% 110% at 12% 8%,
+		#2b323f 0%,
+		#171b22 48%,
+		#0b0d11 100%
+	);
+	color: #e2e8f0;
+	padding: 1rem;
+	animation: voiceCallOverlayIn 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-call-shell {
+		animation: none;
+	}
+}
+
+/**
+ * Scrim behind the live overlay / consent modal — the same CAALM glass
+ * recipe every other modal's backdrop uses (`MODAL_OVERLAY`,
+ * src/lib/ui/modal-styles.ts: `bg-white/10 backdrop-blur-xs`), just with a
+ * dark tint instead of a light one so it still reads against the cinematic
+ * theme. The actual content separation comes from the opaque shell/panel
+ * underneath, not from this scrim being heavily opaque or blurred.
+ */
+.voice-call-scrim {
+	background: rgba(13, 14, 16, 0.4);
+	/* Declaring both backdrop-filter and -webkit-backdrop-filter here makes the build's
+	   CSS minifier drop the unprefixed one entirely (confirmed in the compiled chunk) —
+	   write only the standard property; the build auto-adds the -webkit- prefix itself. */
+	backdrop-filter: blur(8px);
+}
+
+/** Consent modal panel — same dark surface language as the live window it leads into. */
+.voice-call-consent {
+	border-radius: 1rem;
+	background: radial-gradient(
+		ellipse 140% 110% at 12% 8%,
+		#2b323f 0%,
+		#171b22 48%,
+		#0b0d11 100%
+	);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+	animation: voiceCallOverlayIn 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-call-consent {
+		animation: none;
+	}
+}
+
+/**
+ * Consent modal heading fade. Spec calls for a dark-navy-to-gray clip-text
+ * fade (#0f172a -> #64748b) on a near-white panel; .voice-call-consent is
+ * actually dark, so the fade is kept (strong -> soft, left to right) but
+ * recolored to the panel's own light-on-dark range (#e2e8f0 -> #7c8798,
+ * the latter already this panel's secondary-text color) instead of washing
+ * out near-invisible.
+ */
+.voice-call-consent-title {
+	background: linear-gradient(90deg, #e2e8f0 0%, #7c8798 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
+}
+
+/**
+ * Medium-speed glow on the evidence paperclip while attach is unlocked and
+ * waiting for a successful upload. Stops when the control unmounts (hasDocument).
+ */
+@keyframes voiceAttachPulse {
+	0%,
+	100% {
+		color: #6fe0f5;
+		background-color: transparent;
+		box-shadow: 0 0 0 0 rgba(111, 224, 245, 0.35);
+	}
+	50% {
+		color: #b8f4ff;
+		background-color: rgba(7, 143, 171, 0.22);
+		box-shadow: 0 0 10px 2px rgba(111, 224, 245, 0.45);
+	}
+}
+.voice-attach-pulse {
+	animation: voiceAttachPulse 1.7s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-attach-pulse {
+		animation: none;
+		color: #6fe0f5;
+		background-color: rgba(7, 143, 171, 0.18);
+	}
+}
+
+/** Live status pill (dot + "Live — 1:00"). Dot carries the status color; label text stays primary gray. */
+.voice-call-live-dot {
+	height: 0.5rem;
+	width: 0.5rem;
+	border-radius: 9999px;
+	background: #22c55e;
+	animation: voiceCallLiveDotPulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.voice-call-live-dot {
+		animation: none;
+	}
+}
+.voice-call-live-dot.voice-call-live-dot-paused,
+.voice-call-live-dot.voice-call-live-dot-degraded {
+	background: #f9ab72;
+	animation: none;
+}
+.voice-call-live-status {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #e2e8f0;
+}
+.voice-call-live-status.voice-call-live-status-paused,
+.voice-call-live-status.voice-call-live-status-degraded {
+	color: #f9ab72;
+}
+
+.voice-call-badge {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	padding: 0.125rem 0.625rem;
+	font-size: 0.71875rem;
+	font-weight: 600;
+	color: #cbd5e1;
+}
+
+.voice-call-stage {
+	position: relative;
+	overflow: hidden;
+	border-radius: 0.875rem;
+	background: #0a0d12;
+	box-shadow:
+		inset 0 0 140px rgba(0, 0, 0, 0.45),
+		0 0 90px rgba(7, 143, 171, 0.16);
+}
+
+.voice-call-nameplate {
+	position: absolute;
+	top: 0.75rem;
+	left: 0.75rem;
+	border-radius: 9999px;
+	background: rgba(10, 13, 18, 0.68);
+	backdrop-filter: blur(6px);
+	padding: 0.25rem 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #e2e8f0;
+}
+
+.voice-call-caption {
+	position: absolute;
+	bottom: 0.75rem;
+	left: 0.75rem;
+	right: 8.25rem;
+	font-size: 0.78125rem;
+	color: #e2e8f0;
+}
+
+/** Placeholder hint shown before anyone has spoken yet — same slot as the caption, never both at once. */
+.voice-call-start-hint {
+	position: absolute;
+	bottom: 0.75rem;
+	left: 0.75rem;
+	right: 8.25rem;
+	font-size: 0.78125rem;
+	font-weight: 300;
+	font-style: italic;
+	color: #7c8798;
+}
+
+/* Sized for the 512×512 Synthesia stage so the PiP does not cover most of the avatar. */
+.voice-call-pip {
+	position: absolute;
+	bottom: 0.75rem;
+	right: 0.75rem;
+	width: 7rem;
+	height: 5.25rem;
+	overflow: hidden;
+	border-radius: 0.5rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: #0a0d12;
+}
+
+.voice-call-panel {
+	border-radius: 0.875rem;
+	background: #1a202b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 0.75rem;
+}
+
+.voice-call-panel-title {
+	font-size: 0.65625rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #7c8798;
+}
+
+.voice-call-footnote {
+	font-size: 0.71875rem;
+	font-weight: 400;
+	color: #9aa4b2;
+}
+
+.voice-call-speaker-name {
+	font-size: 0.625rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #7c8798;
+}
+.voice-call-speaker-name.voice-call-speaker-name-ai {
+	color: #6fe0f5;
+}
+
+.voice-call-bubble-auditor {
+	display: inline-block;
+	border-radius: 0.5rem;
+	background: rgba(7, 143, 171, 0.18);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+	padding: 0.375rem 0.625rem;
+	font-size: 0.78125rem;
+	font-weight: 400;
+}
+
+.voice-call-bubble-interviewee {
+	display: inline-block;
+	margin-left: auto;
+	border-radius: 0.5rem;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	color: #e2e8f0;
+	padding: 0.375rem 0.625rem;
+	font-size: 0.78125rem;
+	font-weight: 400;
+}
+
+.voice-call-roster-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 5.5rem;
+	border-radius: 0.875rem;
+	background: #1a202b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 0.625rem 0.5rem;
+}
+
+.voice-call-roster-name {
+	font-size: 0.6875rem;
+	font-weight: 600;
+	color: #e2e8f0;
+}
+
+.voice-call-roster-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 2rem;
+	width: 2rem;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.voice-call-role-pill {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	padding: 0.125rem 0.625rem;
+	font-size: 0.65625rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #7c8798;
+}
+.voice-call-role-pill.voice-call-role-pill-facilitator {
+	background: rgba(249, 171, 114, 0.15);
+	border-color: rgba(249, 171, 114, 0.3);
+	color: #f9ab72;
+}
+.voice-call-role-pill.voice-call-role-pill-interviewee {
+	background: rgba(111, 224, 245, 0.15);
+	border-color: rgba(111, 224, 245, 0.3);
+	color: #6fe0f5;
+}
+.voice-call-role-pill.voice-call-role-pill-mock_auditor {
+	background: rgba(7, 143, 171, 0.15);
+	border-color: rgba(7, 143, 171, 0.3);
+	color: #078fab;
+}
+
+.voice-call-control-bar {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	border-radius: 9999px;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 55%),
+		rgba(18, 22, 29, 0.92);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	padding: 0.375rem 0.5rem;
+}
+
+.voice-call-control-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 1.875rem;
+	width: 1.875rem;
+	border-radius: 9999px;
+	color: #e2e8f0;
+	background: transparent;
+	transition: background-color 150ms;
+}
+.voice-call-control-btn:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+.voice-call-control-btn.voice-call-control-btn-danger {
+	color: #ef7a6d;
+}
+.voice-call-control-btn.voice-call-control-btn-danger:hover {
+	background: rgba(239, 122, 109, 0.15);
+}
+
+.voice-call-control-divider {
+	height: 1.25rem;
+	width: 1px;
+	background: rgba(255, 255, 255, 0.12);
+}
+
+/** Dark pill trigger buttons in the control bar that carry a label (Participants count, Session details). */
+.voice-call-control-chip-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.3125rem;
+	height: 1.875rem;
+	border-radius: 9999px;
+	padding: 0 0.625rem;
+	color: #e2e8f0;
+	background: transparent;
+	font-size: 0.71875rem;
+	font-weight: 500;
+	transition: background-color 150ms;
+}
+.voice-call-control-chip-btn:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/** Dark surface popovers/dropdowns opened from the control bar (Participants, Session details, More). */
+.voice-call-popover {
+	border-radius: 0.875rem;
+	background: #1a202b;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.voice-call-menu-item {
+	border-radius: 0.5rem;
+	font-size: 0.78125rem;
+	font-weight: 500;
+	color: #e2e8f0;
+}
+.voice-call-menu-item:focus,
+.voice-call-menu-item[data-highlighted] {
+	background: rgba(7, 143, 171, 0.16) !important;
+	color: #e2e8f0 !important;
+}
+
+/**
+ * Consent-modal checkbox ("I consent" / "Anonymize my voice") and its two
+ * action buttons, per the finalized component spec: the checked checkbox
+ * and the primary button both adopt the window's "toolbar surface"
+ * (control-bar background) rather than a teal fill/gradient, and neither
+ * button nor checkbox has a hover state beyond a border lighten.
+ */
+.ckbox-row {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	cursor: pointer;
+}
+
+.ckbox-box-wrap {
+	position: relative;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
+}
+
+.ckbox-input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.ckbox-box {
+	position: absolute;
+	inset: 0;
+	width: 20px;
+	height: 20px;
+	border-radius: 6px;
+	border: 1.5px solid rgba(255, 255, 255, 0.24);
+	background: rgba(255, 255, 255, 0.04);
+	transition: border-color 150ms;
+}
+.ckbox-row:hover .ckbox-box {
+	border-color: rgba(255, 255, 255, 0.4);
+}
+
+.ckbox-box.checked {
+	background:
+		linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.1),
+			rgba(255, 255, 255, 0) 55%
+		),
+		rgba(18, 22, 29, 0.92);
+	border-color: rgba(255, 255, 255, 0.22);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.ckbox-row:hover .ckbox-box.checked {
+	border-color: rgba(255, 255, 255, 0.32);
+}
+
+/** Wrapping div for the checkmark SVG — centers a replaced element that `inset:0` alone can't stretch. */
+.ckbox-check {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #e2e8f0;
+}
+
+.ckbox-label {
+	font-size: 0.8125rem;
+	font-weight: 400;
+	color: #e2e8f0;
+}
+
+/** Consent modal's primary action — the window's toolbar surface, no teal, no hover effect. */
+.voice-consent-btn-primary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	border-radius: 9999px;
+	background:
+		linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.08),
+			rgba(255, 255, 255, 0) 55%
+		),
+		rgba(18, 22, 29, 0.92);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	color: #e2e8f0;
+}
+.voice-consent-btn-primary:hover {
+	background:
+		linear-gradient(
+			180deg,
+			rgba(255, 255, 255, 0.08),
+			rgba(255, 255, 255, 0) 55%
+		),
+		rgba(18, 22, 29, 0.92);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	color: #e2e8f0;
+}
+/** Muted until "I consent" is checked — dimmed, no shadow, not clickable. */
+.voice-consent-btn-primary:disabled,
+.voice-consent-btn-primary:disabled:hover {
+	background: rgba(255, 255, 255, 0.04);
+	border-color: rgba(255, 255, 255, 0.08);
+	box-shadow: none;
+	color: #7c8798;
+	cursor: not-allowed;
+}
+
+/** Consent modal's Cancel — unchanged ghost/outline look, hover effect removed. */
+.voice-consent-btn-cancel {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: #f2f3f5;
+}
+.voice-consent-btn-cancel:hover {
+	background: rgba(255, 255, 255, 0.05);
+	color: #f2f3f5;
 }

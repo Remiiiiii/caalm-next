@@ -285,7 +285,10 @@ function DraftReview({
 
 	return (
 		<div className={ROW}>
-			<div className={cn(STAGE_BOX, "relative overflow-hidden bg-slate-800")}>
+			<div
+				data-dark-surface
+				className={cn(STAGE_BOX, "relative overflow-hidden bg-slate-800")}
+			>
 				{playing ? (
 					<video
 						className="h-full w-full bg-black object-contain"

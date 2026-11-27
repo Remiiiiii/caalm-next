@@ -1,7 +1,7 @@
 "use client";
 
 import { isToday } from "date-fns";
-import { Check, Unlink2, UserPlus, X } from "lucide-react";
+import { Check, ChevronRight, UserPlus, UserX, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type {
 	AssistantFormField,
@@ -294,9 +294,10 @@ function ParticipantsPicker({
 					)}
 				>
 					<UserPlus className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-					<span className="font-normal text-slate-400">
+					<span className="flex-1 text-left font-normal text-slate-400">
 						Add participants…
 					</span>
+					<ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
 				</button>
 				{picker}
 			</div>
@@ -403,7 +404,7 @@ function ParticipantsPicker({
 									onClick={() => removePerson(person.id)}
 									className="cursor-pointer rounded-md p-1 text-slate-400 opacity-0 hover:bg-slate-200/80 hover:text-slate-700 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 								>
-									<Unlink2 className="h-4 w-4" aria-hidden />
+									<UserX className="h-4 w-4" aria-hidden />
 								</button>
 							</div>
 						))}

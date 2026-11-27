@@ -1,9 +1,12 @@
 import type { EgressInfo } from "livekit-server-sdk";
+import { Permission, Role } from "node-appwrite";
 import { listFindings } from "@/lib/audit-upload/store";
+import { listEvidenceMap } from "@/lib/audits/readiness/evidence-map.service";
 import {
 	createParticipantToken,
 	createVoiceInterviewRoom,
 	livekitBrowserUrl,
+	roomServiceClient,
 } from "@/lib/livekit/client";
 import {
 	attemptIdFromRoomName,
@@ -11,12 +14,15 @@ import {
 	startPracticeRoomEgress,
 } from "@/lib/livekit/egress";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { isSessionFacilitator } from "./access";
 import {
 	markSessionCalendarEventCancelled,
 	syncPrepDeadlineCalendarEvent,
 	syncSessionCalendarEvent,
 } from "./calendar-sync";
-import { canAcceptEvidence } from "./evidence-merge";
+import { canAcceptEvidence, mergeEvidenceSeeds } from "./evidence-merge";
+import { summarizeEvidenceLinks } from "./evidence-link-summary";
+import { formatGapDescription } from "./findings";
 import {
 	enqueuePrepDeadlineReminders,
 	enqueueSessionReminders,
@@ -27,32 +33,53 @@ import {
 import { buildSessionReport } from "./reports";
 import {
 	appendEvidenceStatusLog,
+	createAttachmentRow,
 	createAttemptRow,
+	createEvidenceItemRow,
+	createEvidenceLinkRow,
 	createEvidenceRow,
 	createGapRow,
+	createParticipantRow,
 	createQuestionRow,
 	createReportRow,
 	createScriptRow,
 	createSessionRow,
+	createTranscriptTurnRow,
+	findParticipantRow,
 	getAttempt,
 	getAttemptUnscoped,
 	getEvidence,
+	getEvidenceLink,
 	getSession,
 	listEvidence,
+	listEvidenceLinks,
 	listGaps,
+	listParticipantRows,
 	listQuestions,
 	listScripts,
 	listSessions,
+	listTranscriptTurnRows,
+	resolveAccountIds,
+	updateAttachmentRow,
 	updateAttemptRow,
+	updateEvidenceLinkRow,
 	updateEvidenceRow,
+	updateParticipantRow,
 	updateSessionRow,
 } from "./repository";
-import { followUpForVagueAnswer } from "./roleplay";
+import {
+	type AuditorPersona,
+	followUpForVagueAnswer,
+	INTERVIEWER_PROFILES,
+} from "./roleplay";
 import { applyPracticeScore } from "./score";
 import {
+	DEFAULT_SECTION_BUDGET_MINUTES,
 	emptyCanvas,
 	type ScriptSection,
+	serializeScriptDocument,
 	serializeScriptItems,
+	suggestScriptSectionForQuestion,
 } from "./script-sections";
 import {
 	isSimulationPhase,
@@ -63,13 +90,21 @@ import {
 	EVIDENCE_STATUSES,
 	type EvidenceStatus,
 	parseParticipants,
+	type ReviewAttempt,
+	type ReviewSession,
+	type ReviewSessionParticipantRow,
+	type ReviewTranscriptTurnRow,
 	SESSION_ROLES,
 	type SessionParticipant,
 	type SessionRole,
 	type SessionStatus,
 } from "./types";
 import { scorecardToPracticeReadinessPct } from "./voice/coverage";
-import { gradeVoiceTranscript } from "./voice/grade";
+import {
+	gradeVoiceTranscript,
+	summarizeVoiceTranscript,
+	type VoiceGradedItem,
+} from "./voice/grade";
 import { redactTranscriptTurns } from "./voice/pii";
 import {
 	deletePracticeRecordingFile,
@@ -360,29 +395,83 @@ export async function assignSessionRole(
 	return { session, participants };
 }
 
+// Interview is voice/audio-only — the AI auditor grades spoken answers and any
+// attached documentation, never a live screen-share walkthrough. Prompts are
+// worded so the interviewee can fully answer by describing the process. The
+// `review_questions` collection has no `requiresEvidence` column (adding one
+// needs an explicit schema-change approval — see ReviewQuestion.requiresEvidence
+// in types.ts), so it isn't written here: `rubric`'s wording is what
+// `requiresEvidenceFromRubric` (voice/rubric.ts) reads back to derive the flag —
+// only the two rows below that actually ask for a record/documentation turn on
+// the attach control.
 const TEMPLATE_QUESTIONS = [
-	"Walk me through the last time you reviewed access for this system. Who approved it, and where is the record?",
-	"Show me how a new hire receives access. What happens if the manager is out?",
-	"When a control failed last year, what changed in your process? Show me evidence of the new step.",
+	{
+		prompt:
+			"Walk me through the last time you reviewed access for this system. Who approved it, and where is the record?",
+		rubric:
+			"Answer from the last real occurrence; attach the approval record if you have it.",
+	},
+	{
+		prompt:
+			"In your own words, describe how a new hire receives access to this system, and what happens if their manager is out.",
+		rubric:
+			"Graded on the verbal explanation of the process, not a live demonstration.",
+	},
+	{
+		prompt:
+			"When a control failed last year, what changed in your process? Describe the new step in detail.",
+		rubric:
+			"Answer from the last real occurrence; attach documentation of the new step if you have it.",
+	},
 ];
 
-export async function generateQuestionBank(actor: Actor, sessionId: string) {
+/** One question per Evidence Readiness Matrix requirement, so every requirement gets at least one interview question. `controlRef` carries the real requirementId (see `ReviewQuestion.controlRef`'s doc comment) rather than a generic template prompt. */
+async function questionsFromEvidenceMap(): Promise<
+	Array<{ prompt: string; rubric: string; controlRef: string }>
+> {
+	const rows = await listEvidenceMap();
+	return rows.map((row) => ({
+		prompt: `Walk me through how you meet this requirement: ${row.label}. What evidence do you have, and where is it on file?`,
+		rubric:
+			"Answer from the actual current process; attach the supporting document or record if you have it.",
+		controlRef: row.requirementId,
+	}));
+}
+
+export async function generateQuestionBank(
+	actor: Actor,
+	sessionId: string,
+	source: "template" | "matrix" = "template",
+) {
 	const existing = await getSession(actor.orgId, sessionId);
 	if (!existing) return { error: "I couldn't find that review session." };
 	const existingPrompts = new Set(
 		(await listQuestions(actor.orgId, sessionId)).map((q) => q.prompt.trim()),
 	);
+	const questionSource: Array<{
+		prompt: string;
+		rubric: string;
+		source: string;
+		controlRef?: string;
+	}> =
+		source === "matrix"
+			? (await questionsFromEvidenceMap()).map((q) => ({
+					...q,
+					source: "matrix",
+				}))
+			: TEMPLATE_QUESTIONS.map((q) => ({ ...q, source: "template" }));
 	const created = [];
-	for (const prompt of TEMPLATE_QUESTIONS) {
-		if (existingPrompts.has(prompt.trim())) continue;
+	for (const q of questionSource) {
+		if (existingPrompts.has(q.prompt.trim())) continue;
 		created.push(
 			await createQuestionRow({
 				orgId: actor.orgId,
 				sessionId,
-				prompt,
-				source: "template",
+				prompt: q.prompt,
+				source: q.source,
 				difficulty: "medium",
-				rubric: "Answer from the last real occurrence; show the record.",
+				rubric: q.rubric,
+				controlRef: q.controlRef,
 				createdByUserId: actor.userId,
 			}),
 		);
@@ -390,7 +479,7 @@ export async function generateQuestionBank(actor: Actor, sessionId: string) {
 	await audit(
 		actor,
 		"create",
-		`Generated question bank for ${existing.title}`,
+		`Generated ${source} question bank for ${existing.title}`,
 		{
 			type: "review_session",
 			id: existing.$id,
@@ -493,14 +582,11 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 	const version = (prior[0]?.version ?? 0) + 1;
 	const canvas = emptyCanvas();
 	for (const [index, q] of questions.entries()) {
-		const section =
-			index === 0
-				? "opening"
-				: index === questions.length - 1
-					? "closing"
-					: index % 2 === 0
-						? "evidence"
-						: "process";
+		const section = suggestScriptSectionForQuestion(
+			q.prompt,
+			index,
+			questions.length,
+		);
 		canvas[section].push({
 			id: `${section}-${q.$id}`,
 			questionId: q.$id,
@@ -513,7 +599,10 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 		orgId: actor.orgId,
 		sessionId,
 		version,
-		itemsJson: serializeScriptItems(canvas),
+		itemsJson: serializeScriptDocument({
+			sections: canvas,
+			budgets: { ...DEFAULT_SECTION_BUDGET_MINUTES },
+		}),
 		createdByUserId: actor.userId,
 	});
 	await audit(
@@ -715,35 +804,20 @@ export async function generateEvidenceRequestList(
 	const existing = await getSession(actor.orgId, sessionId);
 	if (!existing) return { error: "I couldn't find that review session." };
 	const already = await listEvidence(actor.orgId, sessionId);
-	const titles = new Set(already.map((item) => item.title));
-	const seeds = [
-		{
-			title: "Access review evidence",
-			controlRef: "CC6",
-			department: existing.department,
-		},
-		{
-			title: "Change management tickets for the period",
-			controlRef: "CC8",
-			department: existing.department,
-		},
-		{
-			title: "Policy acknowledgement for in-scope staff",
-			controlRef: "CC1",
-			department: existing.department,
-		},
-	];
+	const matrixRows = await listEvidenceMap();
+	const seeds = matrixRows.map((row) => ({
+		title: row.label,
+		controlRef: row.requirementId,
+		department: existing.department,
+	}));
+	const toCreate = mergeEvidenceSeeds(already, seeds);
 	const created = [];
-	for (const seed of seeds) {
-		if (titles.has(seed.title)) continue;
+	for (const seed of toCreate) {
 		created.push(
 			await createEvidenceRow({
+				...seed,
 				orgId: actor.orgId,
 				sessionId,
-				title: seed.title,
-				controlRef: seed.controlRef,
-				department: seed.department,
-				status: "not_started",
 			}),
 		);
 	}
@@ -822,6 +896,22 @@ export async function updateEvidenceStatus(
 	return { evidence: updated };
 }
 
+/** A reviewer vouching for a link the system inferred (e.g. from `citedEvidence` text or a spoken claim). `aiSuggested` itself is left as-is — it's a provenance fact (how the link was created), not a status; `confirmedByUserId` is the separate "a human checked this" axis. */
+export async function confirmEvidenceLink(actor: Actor, linkId: string) {
+	const link = await getEvidenceLink(actor.orgId, linkId);
+	if (!link) return { error: "I couldn't find that evidence link." };
+	if (link.confirmedByUserId) return { link };
+	const updated = await updateEvidenceLinkRow(linkId, {
+		confirmedByUserId: actor.userId,
+	});
+	await audit(actor, "update", "Confirmed an AI-suggested evidence link", {
+		type: "evidence_link",
+		id: link.$id,
+		label: link.requirementId,
+	});
+	return { link: updated };
+}
+
 export async function evidenceCoverageReport(
 	orgId: string,
 	sessionId?: string,
@@ -834,7 +924,11 @@ export async function evidenceCoverageReport(
 	const missing = items.filter(
 		(item) => item.status !== "accepted" && item.status !== "submitted",
 	);
-	return { total: items.length, byStatus, missing };
+	// Matrix list columns join these by EvidenceRequest.controlRef (= requirementId).
+	const linkSummaries = sessionId
+		? summarizeEvidenceLinks(await listEvidenceLinks(orgId, sessionId))
+		: undefined;
+	return { total: items.length, byStatus, missing, linkSummaries };
 }
 
 export async function whoOwnsEvidence(orgId: string, requestId: string) {
@@ -957,7 +1051,16 @@ export async function startVoicePracticeRound(
 	actor: Actor,
 	sessionId: string,
 	persona = "by_the_book",
-) {
+): Promise<
+	| { error: string }
+	| { attempt: ReviewAttempt; backend: "nuance" }
+	| {
+			attempt: ReviewAttempt;
+			roomName: string;
+			token: string;
+			livekitUrl: string;
+	  }
+> {
 	const existing = await getSession(actor.orgId, sessionId);
 	if (!existing) return { error: "I couldn't find that review session." };
 	const questions = await listQuestions(actor.orgId, sessionId);
@@ -977,10 +1080,23 @@ export async function startVoicePracticeRound(
 		difficulty: "voice",
 		transcriptJson: JSON.stringify([]),
 		scoresJson: JSON.stringify([]),
-		status: "in_progress",
+		status: "awaiting_consent",
 		dataResidencyRegion: residency,
 		createdByUserId: actor.userId,
 	});
+	await audit(
+		actor,
+		"create",
+		`Started a voice interview on ${existing.title}`,
+		{ type: "review_attempt", id: attempt.$id, label: existing.title },
+	);
+
+	// Simone/Valentina run on Nuance Live, which mints its own room/credentials
+	// (see the nuance-token route) — no LiveKit room or worker job here.
+	if (INTERVIEWER_PROFILES[persona as AuditorPersona]?.backend === "nuance") {
+		return { attempt, backend: "nuance" as const };
+	}
+
 	const roomName = `review-attempt-${attempt.$id}`;
 	const metadata: VoiceAgentJobMetadata = {
 		attemptId: attempt.$id,
@@ -1002,12 +1118,6 @@ export async function startVoicePracticeRound(
 		callId: roomName,
 		dataResidencyRegion: residency,
 	});
-	await audit(
-		actor,
-		"create",
-		`Started a voice interview on ${existing.title}`,
-		{ type: "review_attempt", id: attempt.$id, label: existing.title },
-	);
 	return {
 		attempt: updated,
 		roomName,
@@ -1035,6 +1145,7 @@ export async function recordVoiceConsent(
 		consentAt: new Date().toISOString(),
 		egressId,
 		audioAnonymized: options?.audioAnonymized ?? true,
+		status: "live",
 	});
 	return { attempt: updated };
 }
@@ -1089,7 +1200,9 @@ export async function deleteVoicePracticeRecording(
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	if (attempt.recordingFileId) {
-		await deletePracticeRecordingFile(attempt.recordingFileId).catch(() => undefined);
+		await deletePracticeRecordingFile(attempt.recordingFileId).catch(
+			() => undefined,
+		);
 	}
 	const updated = await updateAttemptRow(attemptId, {
 		recordingFileId: "",
@@ -1104,10 +1217,7 @@ export async function deleteVoicePracticeRecording(
 	return { attempt: updated };
 }
 
-export async function auditPracticePiiReveal(
-	actor: Actor,
-	attemptId: string,
-) {
+export async function auditPracticePiiReveal(actor: Actor, attemptId: string) {
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	await logAuditEvent({
@@ -1132,7 +1242,40 @@ export async function auditPracticePiiReveal(
 /**
  * Called by the voice-agent worker (shared-secret auth, no user session) after
  * every answered question, so a dropped call never loses transcript so far.
+ * Persists one row per turn (`review_transcript_turns`) rather than appending
+ * to the attempt's JSON blob, so Appwrite Realtime can push just the new row
+ * instead of re-sending the whole growing transcript on every turn.
  */
+/**
+ * Builds per-roster-participant Appwrite permissions, translated from this
+ * app's own `users` row id (what roster rows call `userId`) to the real
+ * Appwrite auth account id — `Role.user(...)` only ever matches the latter,
+ * so a grant built straight from the row id silently never matches anyone.
+ */
+async function buildRosterPermissions(
+	roster: ReviewSessionParticipantRow[],
+): Promise<string[]> {
+	const accountIds = await resolveAccountIds(roster.map((p) => p.userId));
+	return roster.flatMap((p) => {
+		const accountId = accountIds.get(p.userId) ?? p.userId;
+		return [
+			Permission.read(Role.user(accountId)),
+			Permission.update(Role.user(accountId)),
+		];
+	});
+}
+
+/** A matrix-generated question's `controlRef` doubles as its requirementId — see the doc comment on `ReviewQuestion.controlRef`. Undefined for template/legacy questions. */
+async function requirementIdForQuestion(
+	orgId: string,
+	sessionId: string,
+	questionId: string | undefined,
+): Promise<string | undefined> {
+	if (!questionId) return undefined;
+	const questions = await listQuestions(orgId, sessionId);
+	return questions.find((q) => q.$id === questionId)?.controlRef;
+}
+
 export async function recordVoiceTurn(
 	attemptId: string,
 	turn: {
@@ -1145,12 +1288,415 @@ export async function recordVoiceTurn(
 ) {
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
-	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
-	transcript.push({ ...turn, at: new Date().toISOString() });
+	const roster = await listParticipantRows(attempt.orgId, attemptId);
+	const permissions = await buildRosterPermissions(roster);
+	const turnRow = await createTranscriptTurnRow(
+		{
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			questionId: turn.questionId,
+			question: turn.question,
+			answer: turn.answer,
+			citedEvidence: turn.citedEvidence,
+			answerQuality: turn.answerQuality,
+			at: new Date().toISOString(),
+			redacted: false,
+		},
+		permissions.length > 0 ? permissions : undefined,
+	);
+	// A spoken answer is testimony, never proof by itself — tag it to its
+	// requirement as a "claimed" link; it only turns documentary when an
+	// attachment lands (see markAttachmentAttached). `citedEvidence` free text
+	// (what the interviewee says they have) is marked AI-suggested/unconfirmed
+	// rather than treated as the evidence itself.
+	const requirementId = await requirementIdForQuestion(
+		attempt.orgId,
+		attempt.sessionId,
+		turn.questionId,
+	);
+	if (requirementId) {
+		await createEvidenceLinkRow({
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			requirementId,
+			attemptId,
+			transcriptTurnId: turnRow.$id,
+			evidenceType: "testimonial",
+			relation: "supports",
+			aiSuggested: Boolean(turn.citedEvidence),
+		}).catch(() => undefined);
+	}
+	const updated = await updateAttemptRow(attemptId, { currentQuestionId: "" });
+	return { attempt: updated };
+}
+
+/** Called by the worker right before it asks a rubric question, so refresh/other clients know what's "current." */
+export async function setCurrentRubricQuestion(
+	attemptId: string,
+	questionId: string | null,
+) {
 	const updated = await updateAttemptRow(attemptId, {
-		transcriptJson: JSON.stringify(transcript),
+		currentQuestionId: questionId ?? "",
 	});
 	return { attempt: updated };
+}
+
+/** Reads the durable transcript for an attempt, falling back to the legacy JSON blob for attempts recorded before `review_transcript_turns` existed. */
+export async function listTranscriptTurns(
+	orgId: string,
+	attemptId: string,
+): Promise<Array<{ questionId: string; question: string; answer: string }>> {
+	const rows = await listTranscriptTurnRows(orgId, attemptId);
+	if (rows.length > 0) {
+		return rows.map((row) => ({
+			questionId: row.questionId ?? "",
+			question: row.question ?? "",
+			answer: row.answer ?? "",
+		}));
+	}
+	const attempt = await getAttemptUnscoped(attemptId);
+	return JSON.parse(attempt?.transcriptJson || "[]");
+}
+
+/**
+ * Creates the attachment's log entry at upload-start time (status `uploading`),
+ * granted the same per-roster-participant row permissions as a spoken turn
+ * (`recordVoiceTurn`). `questionId`/`replyToText` are passed explicitly by the
+ * caller (whichever of the three entry points started the upload) rather than
+ * read from `attempt.currentQuestionId` here, so the per-rubric-item attach
+ * control can tag a row that isn't the currently-active question.
+ */
+export async function startAttachment(
+	actor: Actor,
+	attemptId: string,
+	input: {
+		fileName: string;
+		mimeType: string;
+		fileSize: number;
+		source: "stage_drop" | "rubric_item" | "floating_widget";
+		questionId?: string;
+		replyToText?: string;
+	},
+): Promise<{ row: ReviewTranscriptTurnRow } | { error: string }> {
+	const attempt = await getAttemptUnscoped(attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const roster = await listParticipantRows(attempt.orgId, attemptId);
+	const permissions = await buildRosterPermissions(roster);
+	const row = await createAttachmentRow(
+		{
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			kind: "attachment",
+			questionId: input.questionId,
+			replyToText: input.replyToText,
+			fileName: input.fileName,
+			mimeType: input.mimeType,
+			fileSize: input.fileSize,
+			uploaderName: actor.name,
+			source: input.source,
+			attachmentStatus: "uploading",
+			progressPct: 0,
+			at: new Date().toISOString(),
+		},
+		permissions.length > 0 ? permissions : undefined,
+	);
+	await audit(
+		actor,
+		"create",
+		`Attached ${input.fileName} during a practice interview`,
+		{
+			type: "review_attempt",
+			id: attemptId,
+			label: input.fileName,
+		},
+	);
+	return { row };
+}
+
+export async function updateAttachmentProgress(
+	rowId: string,
+	progressPct: number,
+): Promise<void> {
+	await updateAttachmentRow(rowId, { progressPct });
+}
+
+export async function markAttachmentScanning(
+	rowId: string,
+	fileId: string,
+): Promise<void> {
+	await updateAttachmentRow(rowId, {
+		attachmentStatus: "scanning",
+		fileId,
+		progressPct: 100,
+	});
+}
+
+export async function markAttachmentAttached(
+	rowId: string,
+	sha256?: string,
+): Promise<void> {
+	const row = await updateAttachmentRow(rowId, { attachmentStatus: "attached" });
+	const requirementId = await requirementIdForQuestion(
+		row.orgId,
+		row.sessionId,
+		row.questionId,
+	);
+	if (!requirementId) return; // not tied to a matrix-generated rubric item
+
+	const item = await createEvidenceItemRow({
+		orgId: row.orgId,
+		sessionId: row.sessionId,
+		fileId: row.fileId,
+		fileName: row.fileName,
+		mimeType: row.mimeType,
+		fileSize: row.fileSize,
+		sha256,
+		source: "interview_attachment",
+	});
+	await createEvidenceLinkRow({
+		orgId: row.orgId,
+		sessionId: row.sessionId,
+		itemId: item.$id,
+		requirementId,
+		attemptId: row.attemptId,
+		transcriptTurnId: row.$id,
+		evidenceType: "documentary",
+		relation: "supports",
+		aiSuggested: false,
+	});
+
+	// A document landing answers the request this requirement maps to, if one
+	// exists — reuses updateEvidenceStatus so the sensitive-item gate and
+	// status log still apply, with a system actor (no human drove this).
+	const matchingRequest = (await listEvidence(row.orgId, row.sessionId)).find(
+		(e) => e.controlRef === requirementId && e.status === "not_started",
+	);
+	if (matchingRequest) {
+		const statusResult = await updateEvidenceStatus(
+			{ userId: "system", name: "System", email: "", orgId: row.orgId },
+			matchingRequest.$id,
+			"submitted",
+		).catch((error) => {
+			console.error(
+				"[SERVER] markAttachmentAttached:updateEvidenceStatus",
+				error,
+			);
+			return { error: "status_update_failed" as const };
+		});
+		if ("error" in statusResult) {
+			console.error(
+				"[SERVER] markAttachmentAttached: submitted failed",
+				matchingRequest.$id,
+				statusResult.error,
+			);
+		}
+	}
+}
+
+export async function markAttachmentFailed(
+	rowId: string,
+	reason: string,
+): Promise<void> {
+	await updateAttachmentRow(rowId, {
+		attachmentStatus: "failed",
+		failureReason: reason,
+	});
+}
+
+/** Retries the same row in place (back to `uploading`) — never creates a duplicate entry. */
+export async function retryAttachment(
+	actor: Actor,
+	attemptId: string,
+	rowId: string,
+): Promise<void> {
+	await updateAttachmentRow(rowId, {
+		attachmentStatus: "uploading",
+		progressPct: 0,
+		failureReason: "",
+	});
+	await audit(actor, "update", "Retried a failed interview attachment", {
+		type: "review_attempt",
+		id: attemptId,
+		label: rowId,
+	});
+}
+
+/** Resolves this attempt's facilitator userId: whoever the session's invite list tags `facilitator`, falling back to the attempt's creator if no one has been explicitly assigned. */
+function resolveFacilitatorUserId(
+	session: ReviewSession | null,
+	attempt: ReviewAttempt,
+): string {
+	const participants = parseParticipants(session?.participantsJson);
+	const facilitator = participants.find((p) => p.role === "facilitator");
+	return facilitator?.userId ?? attempt.createdByUserId;
+}
+
+/** Facilitator-only guard shared by `pauseVoiceInterview`/`resumeVoiceInterview`/`endSessionAsFacilitator`. */
+function requireFacilitator(
+	actor: Actor,
+	session: ReviewSession | null,
+	attempt: ReviewAttempt,
+): { error: string } | null {
+	const participants = parseParticipants(session?.participantsJson);
+	if (
+		!isSessionFacilitator(participants, actor.userId, attempt.createdByUserId)
+	) {
+		return { error: "Only the facilitator can do that." };
+	}
+	return null;
+}
+
+/** Looks up a joiner's invited role from the session's invite list; anyone not explicitly tagged joins as an interviewee. */
+function resolveInviteRole(
+	session: ReviewSession | null,
+	userId: string,
+): SessionRole {
+	const participants = parseParticipants(session?.participantsJson);
+	return participants.find((p) => p.userId === userId)?.role ?? "interviewee";
+}
+
+/** Upserts a live roster row when a participant's browser connects to the room. */
+export async function joinSessionAsParticipant(
+	actor: Actor,
+	attemptId: string,
+) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const facilitatorUserId = resolveFacilitatorUserId(session, attempt);
+	const now = new Date().toISOString();
+
+	const existing = await findParticipantRow(attemptId, actor.userId);
+	if (existing) {
+		const updated = await updateParticipantRow(existing.$id, {
+			connectionState: "joined",
+			joinedAt: now,
+			leftAt: "",
+		});
+		return { participant: updated };
+	}
+
+	const permissions = [
+		Permission.read(Role.user(actor.userId)),
+		Permission.update(Role.user(actor.userId)),
+		Permission.read(Role.user(facilitatorUserId)),
+		Permission.update(Role.user(facilitatorUserId)),
+	];
+	const created = await createParticipantRow(
+		{
+			orgId: actor.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			userId: actor.userId,
+			name: actor.name,
+			email: actor.email,
+			role: resolveInviteRole(session, actor.userId),
+			connectionState: "joined",
+			joinedAt: now,
+		},
+		permissions,
+	);
+	return { participant: created };
+}
+
+/** Marks a roster row left when a participant disconnects — doesn't end the session for anyone else. */
+export async function leaveSessionAsParticipant(
+	actor: Actor,
+	attemptId: string,
+) {
+	const existing = await findParticipantRow(attemptId, actor.userId);
+	if (!existing) return { error: "I couldn't find that roster entry." };
+	const updated = await updateParticipantRow(existing.$id, {
+		connectionState: "left",
+		leftAt: new Date().toISOString(),
+	});
+	return { participant: updated };
+}
+
+/** Mirrors local mic/cam toggle state into the roster row so other clients' Participants popover reflects it. */
+export async function setParticipantAvState(
+	actor: Actor,
+	attemptId: string,
+	state: { micOn?: boolean; camOn?: boolean },
+) {
+	const existing = await findParticipantRow(attemptId, actor.userId);
+	if (!existing) return { error: "I couldn't find that roster entry." };
+	const updated = await updateParticipantRow(existing.$id, state);
+	return { participant: updated };
+}
+
+export async function listSessionParticipants(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const participants = await listParticipantRows(actor.orgId, attemptId);
+	return { participants };
+}
+
+/** Facilitator-only. Flips status to `paused`, stamps `pausedAt`, and tells the worker via room metadata so it stops advancing the interview. */
+export async function pauseVoiceInterview(
+	actor: Actor,
+	attemptId: string,
+): Promise<{ error: string } | { attempt: ReviewAttempt }> {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const denied = requireFacilitator(actor, session, attempt);
+	if (denied) return denied;
+	if (attempt.status !== "live") return { attempt };
+	const updated = await updateAttemptRow(attemptId, {
+		status: "paused",
+		pausedAt: new Date().toISOString(),
+	});
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	await roomServiceClient()
+		.updateRoomMetadata(roomName, JSON.stringify({ paused: true }))
+		.catch((err) =>
+			console.error("[SERVER] pauseVoiceInterview:updateRoomMetadata", err),
+		);
+	return { attempt: updated };
+}
+
+/** Facilitator-only. Resumes a paused interview, clearing `pausedAt` and telling the worker it can keep going. */
+export async function resumeVoiceInterview(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const denied = requireFacilitator(actor, session, attempt);
+	if (denied) return denied;
+	if (attempt.status !== "paused") return { attempt };
+	const updated = await updateAttemptRow(attemptId, {
+		status: "live",
+		pausedAt: "",
+	});
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	await roomServiceClient()
+		.updateRoomMetadata(roomName, JSON.stringify({ paused: false }))
+		.catch((err) =>
+			console.error("[SERVER] resumeVoiceInterview:updateRoomMetadata", err),
+		);
+	return { attempt: updated };
+}
+
+/**
+ * Facilitator-only. Ends a live/paused interview for everyone, disconnecting
+ * all room participants; the existing `room_finished` webhook (`finalizeVoiceInterview`)
+ * still does the actual grading once LiveKit reports the room closed.
+ */
+export async function endVoiceInterview(actor: Actor, attemptId: string) {
+	const attempt = await getAttempt(actor.orgId, attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const denied = requireFacilitator(actor, session, attempt);
+	if (denied) return denied;
+	const roomName = attempt.callId || `review-attempt-${attemptId}`;
+	await roomServiceClient()
+		.deleteRoom(roomName)
+		.catch((err) =>
+			console.error("[SERVER] endVoiceInterview:deleteRoom", err),
+		);
+	return { attempt };
 }
 
 /**
@@ -1159,21 +1705,110 @@ export async function recordVoiceTurn(
  */
 export async function finalizeVoiceInterview(roomName: string) {
 	const attemptId = roomName.replace(/^review-attempt-/, "");
+	return finalizeVoiceInterviewAttempt(attemptId);
+}
+
+/**
+ * Called from the browser when a Nuance Live call ends (`session-ended`) —
+ * there is no LiveKit room/webhook for a Nuance-hosted conversation.
+ */
+export async function finalizeNuanceInterview(attemptId: string) {
+	return finalizeVoiceInterviewAttempt(attemptId);
+}
+
+/** Shared grading/report body for both the LiveKit and Nuance voice backends. */
+/**
+ * Turns an uncorroborated requirement into a finding at the end of a voice
+ * interview: a spoken answer alone — however convincing — never closes a
+ * requirement that calls for documentation (`requiresEvidence`); only a
+ * documentary evidence link does. Gaps go to `review_gaps` for the session's
+ * own follow-up list, never into the live readiness score (see
+ * `computeLiveReadinessScore`, deliberately scoped to real contract/license
+ * data only — a rehearsal gap is not a live compliance finding).
+ */
+async function raiseGapsForUncorroboratedRequirements(params: {
+	attempt: ReviewAttempt;
+	rubric: VoiceAgentJobMetadata["rubric"];
+	scorecard: { items: VoiceGradedItem[] };
+}): Promise<void> {
+	const { attempt, rubric, scorecard } = params;
+	const byQuestionId = new Map(scorecard.items.map((item) => [item.questionId, item]));
+
+	for (const rubricItem of rubric) {
+		if (!rubricItem.requiresEvidence || !rubricItem.controlRef) continue;
+		const graded = byQuestionId.get(rubricItem.questionId);
+
+		const links = await listEvidenceLinks(
+			attempt.orgId,
+			attempt.sessionId,
+			rubricItem.controlRef,
+		);
+		const hasDocument = links.some((link) => link.evidenceType === "documentary");
+		if (hasDocument) continue;
+
+		const condition = graded
+			? graded.verdict === "not_covered"
+				? "Not addressed in the interview, and no document was attached."
+				: "Claimed in the interview, but never backed by a document."
+			: "No answer recorded, and no document was attached.";
+
+		await createGapRow({
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			attemptId: attempt.$id,
+			description: formatGapDescription({
+				requirementId: rubricItem.controlRef,
+				criteria: rubricItem.prompt,
+				condition,
+				cause: graded?.rationale,
+			}),
+			status: "open",
+		});
+
+		const matchingRequest = (
+			await listEvidence(attempt.orgId, attempt.sessionId)
+		).find(
+			(e) =>
+				e.controlRef === rubricItem.controlRef &&
+				e.status !== "accepted" &&
+				e.status !== "not_applicable",
+		);
+		if (matchingRequest) {
+			const statusResult = await updateEvidenceStatus(
+				{ userId: "system", name: "System", email: "", orgId: attempt.orgId },
+				matchingRequest.$id,
+				"follow_up_requested",
+			).catch((error) => {
+				console.error(
+					"[SERVER] raiseGapsForUncorroboratedRequirements:updateEvidenceStatus",
+					error,
+				);
+				return { error: "status_update_failed" as const };
+			});
+			if ("error" in statusResult) {
+				console.error(
+					"[SERVER] raiseGapsForUncorroboratedRequirements: follow_up_requested failed",
+					matchingRequest.$id,
+					statusResult.error,
+				);
+			}
+		}
+	}
+}
+
+export async function finalizeVoiceInterviewAttempt(attemptId: string) {
 	const attempt = await getAttemptUnscoped(attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	if (attempt.status === "completed") return { attempt };
 
 	const questions = await listQuestions(attempt.orgId, attempt.sessionId);
 	const rubric = buildVoiceRubric(questions);
-	const transcript = JSON.parse(attempt.transcriptJson || "[]") as Array<{
-		questionId: string;
-		question: string;
-		answer: string;
-	}>;
+	const transcript = await listTranscriptTurns(attempt.orgId, attemptId);
 
-	const scorecard = await gradeVoiceTranscript({ rubric, transcript }).catch(
-		() => null,
-	);
+	const [scorecard, summary] = await Promise.all([
+		gradeVoiceTranscript({ rubric, transcript }).catch(() => null),
+		summarizeVoiceTranscript({ rubric, transcript }).catch(() => null),
+	]);
 	let practiceReadinessPct: number | undefined;
 	if (scorecard) {
 		await createReportRow({
@@ -1187,6 +1822,22 @@ export async function finalizeVoiceInterview(roomName: string) {
 		await updateSessionRow(attempt.sessionId, { practiceReadinessPct }).catch(
 			() => undefined,
 		);
+		await raiseGapsForUncorroboratedRequirements({
+			attempt,
+			rubric,
+			scorecard,
+		}).catch((error) =>
+			console.error("[SERVER] raiseGapsForUncorroboratedRequirements:", error),
+		);
+	}
+	if (summary) {
+		await createReportRow({
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			kind: "practice_summary",
+			bodyJson: JSON.stringify({ attemptId: attempt.$id, ...summary }),
+			createdByUserId: attempt.createdByUserId,
+		}).catch(() => undefined);
 	}
 	const redacted = redactTranscriptTurns(transcript);
 	const updated = await updateAttemptRow(attemptId, {

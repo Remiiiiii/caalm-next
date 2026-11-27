@@ -35,6 +35,8 @@ type ToastInput = {
 	tone?: Tone;
 	/** Override auto-dismiss duration in ms (Infinity = persist). */
 	duration?: number;
+	/** Icon override for the tone's default icon circle. */
+	icon?: React.ReactNode;
 	/** Accepted but ignored — CAALM toast does not support arbitrary className. */
 	className?: string;
 };
@@ -55,6 +57,7 @@ function toast(props: ToastInput) {
 		actions: props.actions,
 		renderAction: props.action,
 		duration: props.duration,
+		icon: props.icon,
 	});
 
 	return {

@@ -17,8 +17,8 @@ import {
 import {
 	catalogDisplayTitleForPrIn,
 	catalogUsesSequentialTasks,
-	lockSnapshotExtras,
 	linkedPrNumbersInCatalog,
+	lockSnapshotExtras,
 	sectionCompletesOnMergedCatalogPrIn,
 	sectionNumberForPrIn,
 	sectionUsesPerTaskPrCompletionIn,
@@ -29,10 +29,6 @@ import {
 	fetchRoadmapCompletionGate,
 	listOpenPullRequests,
 } from "./github";
-import {
-	applyNpoPackagingProgressCap,
-	evaluateNpoPackagingGate,
-} from "./nonprofit/npo-packaging-gate";
 import {
 	areBoardPrTasksComplete,
 	findSectionPullRequest,
@@ -51,6 +47,10 @@ import {
 	firstIncompleteSequentialTask,
 	reconcileNestedTasksWithParentComplete,
 } from "./locking";
+import {
+	applyNpoPackagingProgressCap,
+	evaluateNpoPackagingGate,
+} from "./nonprofit/npo-packaging-gate";
 import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
 import { prdCatalogDisplayTitleForPr } from "./platform-readiness/prd-pr-batches";
 import { ptoCatalogDisplayTitleForPr } from "./production-tools/pto-pr-batches";
@@ -71,6 +71,7 @@ import {
 	saveSection,
 	saveTask,
 } from "./store";
+import { syncTodoSectionsFromGitHub } from "./todo/sync-from-github";
 import type {
 	RoadmapOverview,
 	RoadmapSection,
@@ -592,6 +593,13 @@ function invalidateOverviewCache(catalogKey?: RoadmapCatalogKey) {
 	else overviewCache.clear();
 }
 
+/** Call after writing catalog rows outside this module (e.g. a dynamic todo section). */
+export function invalidateRoadmapOverviewCache(
+	catalogKey?: RoadmapCatalogKey,
+): void {
+	invalidateOverviewCache(catalogKey);
+}
+
 /** Vitest helper — overview cache must not survive resetRoadmapMemoryForTests. */
 export function clearOverviewCacheForTests(): void {
 	invalidateOverviewCache();
@@ -609,6 +617,10 @@ export async function getOverview(options?: {
 		Date.now() - cached.fetchedAt < OVERVIEW_CACHE_MS
 	) {
 		return cached.value;
+	}
+
+	if (catalogKey === "todo") {
+		await syncTodoSectionsFromGitHub().catch(() => {});
 	}
 
 	const [sections, tasksRaw, openPrs] = await Promise.all([

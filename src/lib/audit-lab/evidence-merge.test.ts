@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+	canAcceptEvidence,
+	mergeEvidenceSeeds,
+	parseStoredEvidenceStatus,
+} from "./evidence-merge";
 import type { EvidenceRequest } from "./types";
-import { canAcceptEvidence, mergeEvidenceSeeds } from "./evidence-merge";
 
 describe("mergeEvidenceSeeds", () => {
 	it("skips titles already in the matrix", () => {
@@ -35,5 +39,15 @@ describe("canAcceptEvidence", () => {
 			status: "submitted",
 		} as EvidenceRequest;
 		expect(canAcceptEvidence(item).ok).toBe(false);
+	});
+});
+
+describe("parseStoredEvidenceStatus", () => {
+	it("maps legacy Appwrite enum values to current app statuses", () => {
+		expect(parseStoredEvidenceStatus("follow_up")).toBe("follow_up_requested");
+		expect(parseStoredEvidenceStatus("rejected")).toBe("rejected_resubmit");
+		expect(parseStoredEvidenceStatus("follow_up_requested")).toBe(
+			"follow_up_requested",
+		);
 	});
 });

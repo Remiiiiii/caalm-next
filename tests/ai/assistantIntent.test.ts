@@ -12,6 +12,11 @@ describe("detectDataIntent - scheduling", () => {
 		expect(detectDataIntent("Book a call for Friday morning")).toBe(
 			"schedule_event",
 		);
+		expect(
+			detectDataIntent(
+				"create a new calendar event meeting for November 26 2026 from 10am - 11am",
+			),
+		).toBe("schedule_event");
 	});
 
 	it("detects schedule viewing requests", () => {

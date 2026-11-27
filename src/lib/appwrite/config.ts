@@ -356,6 +356,30 @@ export const appwriteConfig = {
 		"69c4b201001f4e8c2108",
 	),
 
+	/** Audit Lab live-session roster (name: review_session_participants) */
+	reviewSessionParticipantsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_SESSION_PARTICIPANTS_COLLECTION",
+		"69c4b201001f4e8c2109",
+	),
+
+	/** Audit Lab per-turn transcript rows (name: review_transcript_turns) */
+	reviewTranscriptTurnsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_TRANSCRIPT_TURNS_COLLECTION",
+		"69c4b201001f4e8c210a",
+	),
+
+	/** Audit Lab evidence files/records, independent of which requirement they support (name: audit_lab_evidence_items) */
+	auditLabEvidenceItemsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_LAB_EVIDENCE_ITEMS_COLLECTION",
+		"69c4b201001f4e8c210b",
+	),
+
+	/** Audit Lab evidence-item-to-requirement joins (name: audit_lab_evidence_links) */
+	auditLabEvidenceLinksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_LAB_EVIDENCE_LINKS_COLLECTION",
+		"69c4b201001f4e8c210c",
+	),
+
 	/** Audit report files (name: caalm-audit-documents) */
 	auditDocumentsBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_AUDIT_DOCUMENTS_BUCKET",

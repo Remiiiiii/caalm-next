@@ -122,7 +122,7 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		return "cancel_event";
 	}
 	if (
-		/\b(schedule|book|set\s?up|arrange|plan)/.test(q) &&
+		/\b(schedule|book|set\s?up|arrange|plan|create|add|make|new)/.test(q) &&
 		/\b(meeting|meet|call|event|review|appointment)/.test(q)
 	) {
 		return "schedule_event";

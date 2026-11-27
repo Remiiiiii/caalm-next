@@ -35,35 +35,20 @@ function DocumentsNavIcon({
 	height: number;
 }) {
 	return (
-		<svg
-			viewBox="4 2 16 20"
-			fill="none"
-			className="shrink-0 max-w-none"
-			style={{ width: `${width}px`, height: `${height}px` }}
-			aria-hidden
-		>
-			<path
-				fill={NAV_ICON_FILL_GREY}
-				stroke={NAV_ICON_FILL_GREY}
-				strokeWidth={0}
-				strokeLinejoin="round"
-				paintOrder="stroke fill"
-				d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8h-6a2 2 0 0 1-2-2V2z"
-			/>
-			<path
-				stroke="white"
-				strokeWidth="1.75"
-				strokeLinecap="round"
-				d="M8 13h8M8 17h8"
-			/>
-		</svg>
+		<Image
+			src="/assets/icons/files-documents.svg"
+			alt="Documents"
+			width={20}
+			height={20}
+			className="shrink-0 max-w-none object-contain"
+		/>
 	);
 }
 
 export function NavItemIcon({
 	name,
-	width = 20,
-	height = 20,
+	width = 15,
+	height = 15,
 	priority = false,
 }: NavItemIconProps) {
 	if (name === "Documents") {
