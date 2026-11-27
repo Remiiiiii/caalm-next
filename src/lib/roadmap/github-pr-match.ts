@@ -81,9 +81,7 @@ export function catalogTaskCodesForBoardPr(
 	}
 
 	const codes: string[] = [];
-	const walk = (
-		tasks: ReturnType<typeof catalogForKey>[number]["tasks"],
-	) => {
+	const walk = (tasks: ReturnType<typeof catalogForKey>[number]["tasks"]) => {
 		for (const task of tasks) {
 			if (task.linkedPrNumber === prNumber) codes.push(task.taskCode);
 			if (task.children?.length) walk(task.children);
@@ -285,10 +283,13 @@ export function matchPullRequestToTask(
 				? new RegExp(`\\bPRD\\s+${escapedCode}\\b`, "i").test(pr.title)
 				: catalogKey === "pto"
 					? new RegExp(`\\bPTO\\s+${escapedCode}\\b`, "i").test(pr.title)
-					: !/\bNPO\b/i.test(pr.title) &&
-						!/\bPRD\b/i.test(pr.title) &&
-						!/\bPTO\b/i.test(pr.title) &&
-						new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
+					: catalogKey === "todo"
+						? new RegExp(`\\bTODO\\s+${escapedCode}\\b`, "i").test(pr.title)
+						: !/\bNPO\b/i.test(pr.title) &&
+							!/\bPRD\b/i.test(pr.title) &&
+							!/\bPTO\b/i.test(pr.title) &&
+							!/\bTODO\b/i.test(pr.title) &&
+							new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
 	return branchMatch || titleMatch;
 }
 
@@ -323,7 +324,7 @@ export function findTaskPullRequest(
 export function resolveCatalogFromPrMatch(
 	pr: GitHubPullRequestSummary,
 ): CatalogSectionMatch | undefined {
-	for (const catalogKey of ["clm", "npo", "prd", "pto"] as const) {
+	for (const catalogKey of ["clm", "npo", "prd", "pto", "todo"] as const) {
 		const fromCatalog = sectionNumberForPrIn(
 			catalogForKey(catalogKey),
 			pr.number,
@@ -333,7 +334,7 @@ export function resolveCatalogFromPrMatch(
 		}
 	}
 
-	for (const catalogKey of ["clm", "npo", "prd", "pto"] as const) {
+	for (const catalogKey of ["clm", "npo", "prd", "pto", "todo"] as const) {
 		for (const section of catalogForKey(catalogKey)) {
 			if (matchPullRequestToSection(pr, section.sectionNumber, catalogKey)) {
 				return { catalogKey, sectionNumber: section.sectionNumber };
@@ -373,7 +374,7 @@ export function resolveSectionFromPrMatch(
  * matches the catalog task name.
  */
 export function displayPullRequestTitle(title: string): string {
-	return title.replace(/^(?:(?:NPO|PRD|PTO)\s+)?\d+\.\d+\s+/i, "").trim();
+	return title.replace(/^(?:(?:NPO|PRD|PTO|TODO)\s+)?\d+\.\d+\s+/i, "").trim();
 }
 
 /**

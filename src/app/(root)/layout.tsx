@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { Suspense, useEffect, useMemo } from "react";
+import { FloatingCallWidget } from "@/components/audit-lab/call/FloatingCallWidget";
 import DashboardHeader from "@/components/DashboardHeader";
 import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
@@ -16,6 +17,7 @@ import TicketRecordingOverlay from "@/components/tickets/TicketRecordingOverlay"
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import type { UserRole } from "@/constants/rbac";
+import { AuditLabCallProvider } from "@/contexts/AuditLabCallContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CaalmAssistantProvider } from "@/contexts/CaalmAssistantContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
@@ -197,34 +199,37 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	}
 
 	return (
-		<TicketRecordingProvider>
-			<SidebarProvider>
-				<NotificationSoundListener />
-				<main className="relative flex h-screen flex-col overflow-hidden">
-					<WaveLoopBackground className="fixed inset-0 -z-10 h-full w-full object-cover" />
-					<ImpersonationBanner />
-					<div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
-						<Sidebar {...sidebarProps} />
-						<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
-							<MobileNavigation {...navigationProps} />
-							<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
-								<DashboardHeader
-									user={user}
-									hideQuickActions={hideQuickActions}
-								/>
-							</div>
-							<div className="main-content">
-								<DesktopFirstGate>{pageSlot}</DesktopFirstGate>
-							</div>
-						</section>
-						<SonnerToaster position="bottom-right" visibleToasts={3} />
-						<DemoTourLayer />
-						<ReportIssueFab />
-						<TicketRecordingOverlay />
-					</div>
-				</main>
-			</SidebarProvider>
-		</TicketRecordingProvider>
+		<AuditLabCallProvider>
+			<TicketRecordingProvider>
+				<SidebarProvider>
+					<NotificationSoundListener />
+					<main className="relative flex h-screen flex-col overflow-hidden">
+						<WaveLoopBackground className="fixed inset-0 -z-10 h-full w-full object-cover" />
+						<ImpersonationBanner />
+						<div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
+							<Sidebar {...sidebarProps} />
+							<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
+								<MobileNavigation {...navigationProps} />
+								<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
+									<DashboardHeader
+										user={user}
+										hideQuickActions={hideQuickActions}
+									/>
+								</div>
+								<div className="main-content">
+									<DesktopFirstGate>{pageSlot}</DesktopFirstGate>
+								</div>
+							</section>
+							<SonnerToaster position="bottom-right" visibleToasts={3} />
+							<DemoTourLayer />
+							<ReportIssueFab />
+							<TicketRecordingOverlay />
+							<FloatingCallWidget />
+						</div>
+					</main>
+				</SidebarProvider>
+			</TicketRecordingProvider>
+		</AuditLabCallProvider>
 	);
 };
 

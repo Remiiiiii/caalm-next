@@ -83,6 +83,15 @@ const TABLES = [
 				required: false,
 			},
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
+			// Phase 5 — sign-off/lock. `createdByUserId` above doubles as
+			// "prepared by"; the reviewer must be a different person (enforced in
+			// signOffSession, not the schema). signedOffAt/reviewedByUserId are
+			// cleared (go stale) if evidence changes after sign-off; lockedAt is
+			// only ever set once, right after sign-off, and never cleared.
+			{ key: "reviewedByUserId", type: "string", size: 64, required: false },
+			{ key: "signedOffAt", type: "string", size: 64, required: false },
+			{ key: "lockedAt", type: "string", size: 64, required: false },
+			{ key: "legalHold", type: "boolean", required: false },
 		],
 		indexes: [
 			{ key: "orgId_status", type: "key", attributes: ["orgId", "status"] },
@@ -99,6 +108,10 @@ const TABLES = [
 			{ key: "sourceFindingId", type: "string", size: 64, required: false },
 			{ key: "difficulty", type: "string", size: 32, required: true },
 			{ key: "rubric", type: "string", size: 2000, required: false },
+			// Doubles as the shared key with audit_evidence_map.requirementId
+			// (Readiness Evidence Map) for matrix-generated questions — real
+			// requirementIds are short codes (e.g. "CW-PROVIDER-CONTRACT", ~21
+			// chars) that fit this field; no separate column needed.
 			{ key: "controlRef", type: "string", size: 32, required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
@@ -158,6 +171,8 @@ const TABLES = [
 			},
 			{ key: "audioAnonymized", type: "boolean", required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
+			{ key: "currentQuestionId", type: "string", size: 64, required: false },
+			{ key: "pausedAt", type: "string", size: 64, required: false },
 		],
 		indexes: [
 			{
@@ -174,6 +189,10 @@ const TABLES = [
 			{ key: "orgId", type: "string", size: 64, required: true },
 			{ key: "sessionId", type: "string", size: 64, required: true },
 			{ key: "attemptId", type: "string", size: 64, required: false },
+			// The requirementId a gap traces back to is composed into this text
+			// as a parseable "[requirement:ID]" prefix (see gapRequirementId() in
+			// src/lib/audit-lab/findings.ts) rather than a new column — nothing
+			// here needs to query by requirement independently of reading a gap.
 			{ key: "description", type: "string", size: 2000, required: true },
 			{ key: "capId", type: "string", size: 64, required: false },
 			{ key: "status", type: "string", size: 32, required: true },
@@ -193,6 +212,8 @@ const TABLES = [
 			{ key: "orgId", type: "string", size: 64, required: true },
 			{ key: "sessionId", type: "string", size: 64, required: true },
 			{ key: "title", type: "string", size: 256, required: true },
+			// Doubles as the requirementId join key for matrix-generated items —
+			// see the matching comment on review_questions.controlRef above.
 			{ key: "controlRef", type: "string", size: 64, required: false },
 			{ key: "department", type: "string", size: 256, required: false },
 			{ key: "ownerUserId", type: "string", size: 64, required: false },
@@ -216,6 +237,12 @@ const TABLES = [
 			},
 			{ key: "dueAt", type: "string", size: 64, required: false },
 			{ key: "sensitive", type: "boolean", required: false },
+			{
+				key: "testResult",
+				type: "enum",
+				elements: ["not_tested", "no_exception", "exception", "deficiency"],
+				required: false,
+			},
 		],
 		indexes: [
 			{
@@ -259,6 +286,169 @@ const TABLES = [
 			{ key: "orgId_kind", type: "key", attributes: ["orgId", "kind"] },
 		],
 	},
+	{
+		tableId: "69c4b201001f4e8c2109",
+		name: "review_session_participants",
+		rowSecurity: true,
+		columns: [
+			{ key: "orgId", type: "string", size: 64, required: true },
+			{ key: "sessionId", type: "string", size: 64, required: true },
+			{ key: "attemptId", type: "string", size: 64, required: true },
+			{ key: "userId", type: "string", size: 64, required: true },
+			{ key: "name", type: "string", size: 256, required: false },
+			{ key: "email", type: "string", size: 256, required: false },
+			{
+				key: "role",
+				type: "enum",
+				elements: ["facilitator", "mock_auditor", "interviewee", "observer"],
+				required: true,
+			},
+			{
+				key: "connectionState",
+				type: "enum",
+				elements: ["invited", "joined", "left"],
+				required: true,
+			},
+			{ key: "micOn", type: "boolean", required: false },
+			{ key: "camOn", type: "boolean", required: false },
+			{ key: "joinedAt", type: "string", size: 64, required: false },
+			{ key: "leftAt", type: "string", size: 64, required: false },
+		],
+		indexes: [
+			{
+				key: "orgId_attemptId",
+				type: "key",
+				attributes: ["orgId", "attemptId"],
+			},
+			{
+				key: "attemptId_userId",
+				type: "unique",
+				attributes: ["attemptId", "userId"],
+			},
+		],
+	},
+	{
+		tableId: "69c4b201001f4e8c210a",
+		name: "review_transcript_turns",
+		rowSecurity: true,
+		columns: [
+			{ key: "orgId", type: "string", size: 64, required: true },
+			{ key: "sessionId", type: "string", size: 64, required: true },
+			{ key: "attemptId", type: "string", size: 64, required: true },
+			{ key: "questionId", type: "string", size: 64, required: false },
+			{ key: "question", type: "string", size: 2000, required: false },
+			{ key: "answer", type: "longtext", required: false },
+			{ key: "citedEvidence", type: "string", size: 2000, required: false },
+			{
+				key: "answerQuality",
+				type: "enum",
+				elements: ["strong", "adequate", "weak"],
+				required: false,
+			},
+			{ key: "at", type: "string", size: 64, required: true },
+			{ key: "redacted", type: "boolean", required: false },
+			// Attachment entries share this table with spoken turns (one ordered log, one
+			// realtime subscription); old rows have no `kind` and are treated as "turn".
+			{
+				key: "kind",
+				type: "enum",
+				elements: ["turn", "attachment"],
+				required: false,
+			},
+			{ key: "fileId", type: "string", size: 64, required: false },
+			{ key: "fileName", type: "string", size: 512, required: false },
+			{ key: "mimeType", type: "string", size: 128, required: false },
+			{ key: "fileSize", type: "integer", required: false },
+			{ key: "uploaderName", type: "string", size: 128, required: false },
+			{
+				key: "source",
+				type: "enum",
+				elements: ["stage_drop", "rubric_item", "floating_widget"],
+				required: false,
+			},
+			{ key: "replyToText", type: "string", size: 2000, required: false },
+			{
+				key: "attachmentStatus",
+				type: "enum",
+				elements: ["uploading", "scanning", "attached", "failed"],
+				required: false,
+			},
+			{ key: "progressPct", type: "integer", required: false, min: 0, max: 100 },
+			{ key: "failureReason", type: "string", size: 500, required: false },
+		],
+		indexes: [
+			{
+				key: "orgId_attemptId",
+				type: "key",
+				attributes: ["orgId", "attemptId"],
+			},
+		],
+	},
+	{
+		tableId: "69c4b201001f4e8c210b",
+		name: "audit_lab_evidence_items",
+		columns: [
+			{ key: "orgId", type: "string", size: 64, required: true },
+			{ key: "sessionId", type: "string", size: 64, required: true },
+			{ key: "fileId", type: "string", size: 64, required: false },
+			{ key: "fileName", type: "string", size: 512, required: false },
+			{ key: "mimeType", type: "string", size: 128, required: false },
+			{ key: "fileSize", type: "integer", required: false },
+			{ key: "sha256", type: "string", size: 64, required: false },
+			{
+				key: "source",
+				type: "enum",
+				elements: ["interview_attachment", "direct_upload", "existing_record"],
+				required: true,
+			},
+			{ key: "existingRecordRef", type: "string", size: 128, required: false },
+			{ key: "uploaderUserId", type: "string", size: 64, required: false },
+			// Set only when added to an already-locked session — the record of
+			// why this item was allowed in after lock (items are never deleted,
+			// locked or not, since no delete path exists for this table at all).
+			{ key: "lockOverrideReason", type: "string", size: 500, required: false },
+		],
+		indexes: [
+			{ key: "orgId_sessionId", type: "key", attributes: ["orgId", "sessionId"] },
+		],
+	},
+	{
+		tableId: "69c4b201001f4e8c210c",
+		name: "audit_lab_evidence_links",
+		columns: [
+			{ key: "orgId", type: "string", size: 64, required: true },
+			{ key: "sessionId", type: "string", size: 64, required: true },
+			// Optional: a pure testimonial link (a spoken claim, nothing attached
+			// yet) has no file-backed item — only transcriptTurnId points at it.
+			{ key: "itemId", type: "string", size: 64, required: false },
+			{ key: "requirementId", type: "string", size: 64, required: true },
+			{ key: "requestId", type: "string", size: 64, required: false },
+			{ key: "attemptId", type: "string", size: 64, required: false },
+			{ key: "transcriptTurnId", type: "string", size: 64, required: false },
+			{
+				key: "evidenceType",
+				type: "enum",
+				elements: ["documentary", "testimonial", "observational"],
+				required: true,
+			},
+			{
+				key: "relation",
+				type: "enum",
+				elements: ["supports", "contradicts"],
+				required: true,
+			},
+			{ key: "aiSuggested", type: "boolean", required: false },
+			{ key: "confirmedByUserId", type: "string", size: 64, required: false },
+		],
+		indexes: [
+			{ key: "orgId_sessionId", type: "key", attributes: ["orgId", "sessionId"] },
+			{
+				key: "orgId_requirementId",
+				type: "key",
+				attributes: ["orgId", "requirementId"],
+			},
+		],
+	},
 ];
 
 if (!PROJECT || !API_KEY) {
@@ -298,13 +488,15 @@ async function createTable(databaseId, table) {
 		body: {
 			tableId: table.tableId,
 			name: table.name,
-			permissions: [
-				'read("users")',
-				'create("users")',
-				'update("users")',
-				'delete("users")',
-			],
-			rowSecurity: false,
+			permissions: table.rowSecurity
+				? ['create("users")']
+				: [
+						'read("users")',
+						'create("users")',
+						'update("users")',
+						'delete("users")',
+					],
+			rowSecurity: Boolean(table.rowSecurity),
 			enabled: true,
 		},
 	});
@@ -422,6 +614,6 @@ if (INCLUDE_DEMO) await provisionDatabase(DEMO_DB);
 
 console.log(
 	APPLY
-		? "\nDone. Config fallbacks already use 69c4b201001f4e8c2101–2108."
+		? "\nDone. Config fallbacks already use 69c4b201001f4e8c2101–210a."
 		: "\nDry run only. Re-run with --apply to create tables.",
 );

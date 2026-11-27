@@ -209,7 +209,7 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Audit Lab": {
-		src: "/assets/icons/calendar3.svg",
+		src: "/assets/icons/flask.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,

@@ -2,6 +2,8 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type {
+	AuditLabEvidenceItem,
+	AuditLabEvidenceLink,
 	EvidenceRequest,
 	EvidenceStatus,
 	ReviewAttempt,
@@ -10,8 +12,18 @@ import type {
 	ReviewReport,
 	ReviewScript,
 	ReviewSession,
+	ReviewSessionParticipantRow,
+	ReviewTranscriptTurnRow,
 	SessionStatus,
 } from "./types";
+import { normalizeEvidenceStatus } from "./types";
+
+function mapEvidenceRequest(row: EvidenceRequest): EvidenceRequest {
+	return {
+		...row,
+		status: normalizeEvidenceStatus(String(row.status ?? "")),
+	};
+}
 
 function dbId(): string {
 	return appwriteConfig.databaseId || "default-db";
@@ -20,6 +32,36 @@ function dbId(): string {
 async function tables() {
 	const { tablesDB } = await createAdminClient();
 	return tablesDB;
+}
+
+/**
+ * Maps `users` collection row ids (what this app calls "userId" everywhere —
+ * roster rows, `createdByUserId`, etc.) to the real Appwrite auth account id.
+ * The two differ: Appwrite's realtime/permission system only ever recognizes
+ * `Role.user(accountId)`, so a permission grant built from the row id instead
+ * never matches the actual connected user. Falls back to the row id itself
+ * for any id with no matching row, so a lookup miss degrades to the (still
+ * broken, but no worse than before) previous behavior rather than throwing.
+ */
+export async function resolveAccountIds(
+	userIds: string[],
+): Promise<Map<string, string>> {
+	const unique = [...new Set(userIds)].filter(Boolean);
+	const map = new Map<string, string>(unique.map((id) => [id, id]));
+	if (unique.length === 0) return map;
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.usersCollectionId || "users",
+		queries: [Query.equal("$id", unique), Query.limit(unique.length)],
+	});
+	for (const row of result.rows as unknown as Array<{
+		$id: string;
+		accountId?: string;
+	}>) {
+		if (row.accountId) map.set(row.$id, row.accountId);
+	}
+	return map;
 }
 
 export async function createSessionRow(
@@ -231,6 +273,8 @@ export async function updateAttemptRow(
 			| "transcriptRedactedJson"
 			| "dataResidencyRegion"
 			| "audioAnonymized"
+			| "currentQuestionId"
+			| "pausedAt"
 		>
 	>,
 ): Promise<ReviewAttempt> {
@@ -298,7 +342,7 @@ export async function getEvidence(
 		});
 		const item = row as unknown as EvidenceRequest;
 		if (item.orgId !== orgId) return null;
-		return item;
+		return mapEvidenceRequest(item);
 	} catch {
 		return null;
 	}
@@ -316,7 +360,7 @@ export async function listEvidence(
 		tableId: appwriteConfig.evidenceRequestsCollectionId,
 		queries,
 	});
-	return result.rows as unknown as EvidenceRequest[];
+	return (result.rows as unknown as EvidenceRequest[]).map(mapEvidenceRequest);
 }
 
 export async function updateEvidenceRow(
@@ -330,6 +374,7 @@ export async function updateEvidenceRow(
 			| "status"
 			| "department"
 			| "dueAt"
+			| "testResult"
 		>
 	>,
 ): Promise<EvidenceRequest> {
@@ -340,7 +385,7 @@ export async function updateEvidenceRow(
 		rowId: requestId,
 		data,
 	});
-	return row as unknown as EvidenceRequest;
+	return mapEvidenceRequest(row as unknown as EvidenceRequest);
 }
 
 export async function listEvidenceStatusLog(orgId: string, limit = 50) {
@@ -407,6 +452,235 @@ export async function listReports(
 		queries,
 	});
 	return result.rows as unknown as ReviewReport[];
+}
+
+export async function createParticipantRow(
+	data: Omit<ReviewSessionParticipantRow, "$id">,
+	permissions: string[],
+): Promise<ReviewSessionParticipantRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		rowId: ID.unique(),
+		data,
+		permissions,
+	});
+	return row as unknown as ReviewSessionParticipantRow;
+}
+
+export async function findParticipantRow(
+	attemptId: string,
+	userId: string,
+): Promise<ReviewSessionParticipantRow | null> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		queries: [
+			Query.equal("attemptId", attemptId),
+			Query.equal("userId", userId),
+			Query.limit(1),
+		],
+	});
+	return (result.rows[0] as unknown as ReviewSessionParticipantRow) ?? null;
+}
+
+export async function listParticipantRows(
+	orgId: string,
+	attemptId: string,
+): Promise<ReviewSessionParticipantRow[]> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("attemptId", attemptId),
+			Query.limit(50),
+		],
+	});
+	return result.rows as unknown as ReviewSessionParticipantRow[];
+}
+
+export async function updateParticipantRow(
+	rowId: string,
+	data: Partial<
+		Pick<
+			ReviewSessionParticipantRow,
+			"connectionState" | "micOn" | "camOn" | "joinedAt" | "leftAt" | "role"
+		>
+	>,
+): Promise<ReviewSessionParticipantRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewSessionParticipantsCollectionId,
+		rowId,
+		data,
+	});
+	return row as unknown as ReviewSessionParticipantRow;
+}
+
+export async function createTranscriptTurnRow(
+	data: Omit<ReviewTranscriptTurnRow, "$id">,
+	permissions?: string[],
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId: ID.unique(),
+		data,
+		...(permissions ? { permissions } : {}),
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function listTranscriptTurnRows(
+	orgId: string,
+	attemptId: string,
+): Promise<ReviewTranscriptTurnRow[]> {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("attemptId", attemptId),
+			Query.orderAsc("$createdAt"),
+			Query.limit(1000),
+		],
+	});
+	return result.rows as unknown as ReviewTranscriptTurnRow[];
+}
+
+/** Attachment entries share `review_transcript_turns` with spoken turns (one log, one realtime subscription). */
+export async function createAttachmentRow(
+	data: Omit<ReviewTranscriptTurnRow, "$id">,
+	permissions?: string[],
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId: ID.unique(),
+		data,
+		...(permissions ? { permissions } : {}),
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function updateAttachmentRow(
+	rowId: string,
+	patch: Partial<ReviewTranscriptTurnRow>,
+): Promise<ReviewTranscriptTurnRow> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.reviewTranscriptTurnsCollectionId,
+		rowId,
+		data: patch,
+	});
+	return row as unknown as ReviewTranscriptTurnRow;
+}
+
+export async function createEvidenceItemRow(
+	data: Omit<AuditLabEvidenceItem, "$id">,
+): Promise<AuditLabEvidenceItem> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.auditLabEvidenceItemsCollectionId,
+		rowId: ID.unique(),
+		data,
+	});
+	return row as unknown as AuditLabEvidenceItem;
+}
+
+export async function getEvidenceItem(
+	orgId: string,
+	itemId: string,
+): Promise<AuditLabEvidenceItem | null> {
+	try {
+		const tablesDB = await tables();
+		const row = await tablesDB.getRow({
+			databaseId: dbId(),
+			tableId: appwriteConfig.auditLabEvidenceItemsCollectionId,
+			rowId: itemId,
+		});
+		const item = row as unknown as AuditLabEvidenceItem;
+		if (item.orgId !== orgId) return null;
+		return item;
+	} catch {
+		return null;
+	}
+}
+
+export async function getEvidenceLink(
+	orgId: string,
+	linkId: string,
+): Promise<AuditLabEvidenceLink | null> {
+	try {
+		const tablesDB = await tables();
+		const row = await tablesDB.getRow({
+			databaseId: dbId(),
+			tableId: appwriteConfig.auditLabEvidenceLinksCollectionId,
+			rowId: linkId,
+		});
+		const link = row as unknown as AuditLabEvidenceLink;
+		if (link.orgId !== orgId) return null;
+		return link;
+	} catch {
+		return null;
+	}
+}
+
+export async function createEvidenceLinkRow(
+	data: Omit<AuditLabEvidenceLink, "$id">,
+): Promise<AuditLabEvidenceLink> {
+	const tablesDB = await tables();
+	const row = await tablesDB.createRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.auditLabEvidenceLinksCollectionId,
+		rowId: ID.unique(),
+		data,
+	});
+	return row as unknown as AuditLabEvidenceLink;
+}
+
+export async function updateEvidenceLinkRow(
+	linkId: string,
+	data: Partial<Pick<AuditLabEvidenceLink, "aiSuggested" | "confirmedByUserId">>,
+): Promise<AuditLabEvidenceLink> {
+	const tablesDB = await tables();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: appwriteConfig.auditLabEvidenceLinksCollectionId,
+		rowId: linkId,
+		data,
+	});
+	return row as unknown as AuditLabEvidenceLink;
+}
+
+export async function listEvidenceLinks(
+	orgId: string,
+	sessionId: string,
+	requirementId?: string,
+): Promise<AuditLabEvidenceLink[]> {
+	const tablesDB = await tables();
+	const queries = [
+		Query.equal("orgId", orgId),
+		Query.equal("sessionId", sessionId),
+		Query.limit(500),
+	];
+	if (requirementId) queries.push(Query.equal("requirementId", requirementId));
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.auditLabEvidenceLinksCollectionId,
+		queries,
+	});
+	return result.rows as unknown as AuditLabEvidenceLink[];
 }
 
 export type { SessionStatus };
