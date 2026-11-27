@@ -114,6 +114,7 @@ export type ReviewQuestion = {
 	sourceFindingId?: string;
 	difficulty: string;
 	rubric?: string;
+	/** For matrix-generated questions, holds the real `AuditEvidenceMapRow.requirementId` (e.g. "CW-PROVIDER-CONTRACT") rather than a SOC2 stub code — the field already threads end-to-end into the voice rubric and the LiveKit worker, so no separate join-key column was added. */
 	controlRef?: string;
 	createdByUserId: string;
 	/** Whether this item expects supporting documentation, not just a spoken answer. Rows created before this field existed fall back to inferring it from `rubric` text — see `requiresEvidenceFromRubric`. */
@@ -212,6 +213,12 @@ export type ReviewTranscriptTurnRow = {
 	failureReason?: string;
 };
 
+/**
+ * `description` carries a `"[requirement:<requirementId>] "` prefix for gaps
+ * traced back to an evidence-map requirement — see `src/lib/audit-lab/findings.ts`
+ * for the format helpers. Gaps raised outside that flow (the legacy `scoreAnswer`
+ * path) have no prefix and `gapRequirementId()` returns `undefined` for them.
+ */
 export type ReviewGap = {
 	$id: string;
 	orgId: string;
@@ -222,11 +229,27 @@ export type ReviewGap = {
 	status: string;
 };
 
+export const EVIDENCE_TEST_RESULTS = [
+	"not_tested",
+	"no_exception",
+	"exception",
+	"deficiency",
+] as const;
+
+/**
+ * Whether the control passed, independent of `EvidenceStatus` (whether the
+ * proof has been collected/accepted). Keeping these as two separate fields
+ * avoids conflating "we accepted this file" with "the control passed" — the
+ * most common evidence-matrix modeling mistake.
+ */
+export type EvidenceTestResult = (typeof EVIDENCE_TEST_RESULTS)[number];
+
 export type EvidenceRequest = {
 	$id: string;
 	orgId: string;
 	sessionId: string;
 	title: string;
+	/** For matrix-generated requests, holds the real requirementId — see the matching comment on `ReviewQuestion.controlRef`. */
 	controlRef?: string;
 	department?: string;
 	ownerUserId?: string;
@@ -235,6 +258,7 @@ export type EvidenceRequest = {
 	status: EvidenceStatus;
 	dueAt?: string;
 	sensitive?: boolean;
+	testResult?: EvidenceTestResult;
 };
 
 export type ReviewReport = {
@@ -244,6 +268,47 @@ export type ReviewReport = {
 	kind: string;
 	bodyJson: string;
 	createdByUserId: string;
+};
+
+export type EvidenceItemSource =
+	| "interview_attachment"
+	| "direct_upload"
+	| "existing_record";
+
+/** One evidence file (or existing-record reference), independent of which requirement(s) it supports — see `AuditLabEvidenceLink` for the many-to-many join. */
+export type AuditLabEvidenceItem = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	fileId?: string;
+	fileName?: string;
+	mimeType?: string;
+	fileSize?: number;
+	sha256?: string;
+	source: EvidenceItemSource;
+	/** For `source: "existing_record"` — e.g. a contract/license $id already tagged on the readiness evidence map. */
+	existingRecordRef?: string;
+	uploaderUserId?: string;
+};
+
+export type EvidenceLinkType = "documentary" | "testimonial" | "observational";
+export type EvidenceLinkRelation = "supports" | "contradicts";
+
+/** Joins one evidence item to one requirement, optionally tracing back to the exact request/attempt/transcript turn it came from. `itemId` is unset for a pure testimonial link — a spoken claim with no file behind it yet, traced via `transcriptTurnId` instead. */
+export type AuditLabEvidenceLink = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	itemId?: string;
+	requirementId: string;
+	requestId?: string;
+	attemptId?: string;
+	transcriptTurnId?: string;
+	evidenceType: EvidenceLinkType;
+	relation: EvidenceLinkRelation;
+	/** True until a reviewer confirms a link the system inferred (e.g. from `citedEvidence` text) rather than one a person explicitly attached. */
+	aiSuggested?: boolean;
+	confirmedByUserId?: string;
 };
 
 export function parseParticipants(

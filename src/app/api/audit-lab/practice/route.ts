@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 				String(body.sessionId ?? ""),
 				body.persona,
 			);
-			if (result.error) {
+			if ("error" in result) {
 				return NextResponse.json({ error: result.error }, { status: 400 });
 			}
 			return NextResponse.json({ data: result });
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 				resolved.actor,
 				String(body.attemptId ?? ""),
 			);
-			if (result.error) {
+			if ("error" in result) {
 				return NextResponse.json({ error: result.error }, { status: 403 });
 			}
 			return NextResponse.json({ data: result });

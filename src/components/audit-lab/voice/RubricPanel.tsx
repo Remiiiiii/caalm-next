@@ -1,15 +1,18 @@
-import { Check, Circle, Paperclip } from "lucide-react";
+import { Check, Circle, FileCheck, Paperclip } from "lucide-react";
 import { useRef } from "react";
 import type { CoverageSnapshot } from "@/lib/audit-lab/voice/coverage";
+import { isAttachControlVisible } from "@/lib/audit-lab/voice/coverage";
 import { cn } from "@/lib/utils";
 
 function RubricAttachButton({
 	questionId,
 	prompt,
+	pulsing,
 	onAttach,
 }: {
 	questionId: string;
 	prompt: string;
+	pulsing: boolean;
 	onAttach: (file: File, questionId: string, prompt: string) => void;
 }) {
 	const inputRef = useRef<HTMLInputElement | null>(null);
@@ -27,8 +30,12 @@ function RubricAttachButton({
 			/>
 			<button
 				type="button"
-				title="Attach evidence to this question"
-				className="shrink-0 rounded-full p-1 text-[#7c8798] hover:bg-white/10 hover:text-[#6fe0f5]"
+				title="Attach evidence to this question. You can pick a different file if the last one was wrong."
+				aria-label="Attach evidence to this question"
+				className={cn(
+					"shrink-0 rounded-full p-1 text-[#6fe0f5] hover:bg-white/10",
+					pulsing && "voice-attach-pulse",
+				)}
 				onClick={(e) => {
 					e.stopPropagation();
 					inputRef.current?.click();
@@ -40,7 +47,7 @@ function RubricAttachButton({
 	);
 }
 
-/** Progress bar + checklist of rubric items covered so far (spec's `RubricPanel`) — each row can also attach evidence tagged to that specific item, independent of which item is currently active. */
+/** Progress bar + checklist of rubric items covered so far (spec's `RubricPanel`). */
 export function RubricPanel({
 	coverage,
 	onAttach,
@@ -76,52 +83,70 @@ export function RubricPanel({
 				/>
 			</div>
 			<ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto review-hover-scroll">
-				{(coverage?.items ?? []).map((item) => (
-					<li
-						key={item.questionId}
-						className={cn(
-							"flex items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px]",
-							item.status === "current" &&
-								"bg-[#078fab]/10 ring-1 ring-inset ring-[#078fab]/40",
-						)}
-					>
-						{item.status === "covered" ? (
-							<Check
-								className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#22c55e]"
-								aria-hidden
-							/>
-						) : (
-							<Circle
-								className={cn(
-									"mt-0.5 h-3.5 w-3.5 shrink-0",
-									item.status === "current"
-										? "text-[#078fab]"
-										: "text-white/25",
-								)}
-								aria-hidden
-							/>
-						)}
-						<span
+				{(coverage?.items ?? []).map((item) => {
+					const showAttach =
+						Boolean(onAttach) && isAttachControlVisible(item);
+					return (
+						<li
+							key={item.questionId}
 							className={cn(
-								"flex-1",
-								item.status === "current" && "font-medium text-[#e2e8f0]",
-								item.status === "remaining" && "text-[#aab2c0]",
-								item.status === "covered" && "text-[#5d6675] line-through",
+								"flex items-start gap-2 rounded-md px-2 py-1.5 text-[12.5px]",
+								item.status === "current" &&
+									"bg-[#078fab]/10 ring-1 ring-inset ring-[#078fab]/40",
 							)}
 						>
-							{item.prompt}
-						</span>
-						{onAttach &&
-						item.requiresEvidence &&
-						item.status !== "remaining" ? (
-							<RubricAttachButton
-								questionId={item.questionId}
-								prompt={item.prompt}
-								onAttach={onAttach}
-							/>
-						) : null}
-					</li>
-				))}
+							{item.status === "covered" ? (
+								<Check
+									className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#22c55e]"
+									aria-hidden
+								/>
+							) : (
+								<Circle
+									className={cn(
+										"mt-0.5 h-3.5 w-3.5 shrink-0",
+										item.status === "current"
+											? "text-[#078fab]"
+											: "text-white/25",
+									)}
+									aria-hidden
+								/>
+							)}
+							<span
+								className={cn(
+									"flex-1",
+									item.status === "current" && "font-medium text-[#e2e8f0]",
+									item.status === "remaining" && "text-[#aab2c0]",
+									item.status === "covered" && "text-[#5d6675] line-through",
+								)}
+							>
+								{item.prompt}
+							</span>
+							{/* A spoken answer alone never closes a requirement that calls for
+							    documentation — only an actual attachment does. */}
+							{item.requiresEvidence &&
+							(item.status === "covered" || item.hasDocument) ? (
+								item.hasDocument ? (
+									<span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-[#22c55e]">
+										<FileCheck className="h-3 w-3" aria-hidden />
+										Document
+									</span>
+								) : (
+									<span className="shrink-0 text-[11px] font-medium text-[#eab308]">
+										Statement only
+									</span>
+								)
+							) : null}
+							{showAttach && onAttach ? (
+								<RubricAttachButton
+									questionId={item.questionId}
+									prompt={item.prompt}
+									pulsing
+									onAttach={onAttach}
+								/>
+							) : null}
+						</li>
+					);
+				})}
 			</ul>
 		</div>
 	);

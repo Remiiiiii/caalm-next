@@ -143,3 +143,34 @@ export function placeQuestionInSection(
 	});
 	return next;
 }
+
+/**
+ * Pick a script section from the question text — evidence walkthroughs should
+ * not land in Opening/Closing just because they are first/last in the bank.
+ */
+export function suggestScriptSectionForQuestion(
+	prompt: string,
+	index: number,
+	total: number,
+): ScriptSection {
+	const text = prompt.trim().toLowerCase();
+	const asksForEvidence =
+		/\b(evidence|document|record|on file|attach|contract|policy|agreement|log)\b/.test(
+			text,
+		) || /what evidence do you have/.test(text);
+	if (asksForEvidence) return "evidence";
+
+	const looksLikeOpening =
+		/\b(welcome|introduce|yourself|kick.?off|start with|opening)\b/.test(text);
+	const looksLikeClosing =
+		/\b(wrap.?up|closing|anything else|final|thank you|before we end)\b/.test(
+			text,
+		);
+	if (looksLikeOpening) return "opening";
+	if (looksLikeClosing) return "closing";
+
+	// Soft bookends only when the prompt is not evidence-heavy and the bank is large enough.
+	if (total >= 4 && index === 0) return "opening";
+	if (total >= 4 && index === total - 1) return "closing";
+	return "process";
+}

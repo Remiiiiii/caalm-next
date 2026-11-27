@@ -38,9 +38,11 @@ export function FloatingCallWidget() {
 	const activeRubricItem = call.coverage?.items.find(
 		(item) => item.questionId === call.coverage?.currentQuestionId,
 	);
+	const widgetAttachOpen = Boolean(activeRubricItem?.attachOpen);
 
 	function handleDragOver(e: DragEvent<HTMLDivElement>) {
 		if (!e.dataTransfer.types.includes("Files")) return;
+		if (!widgetAttachOpen) return;
 		e.preventDefault();
 		setIsDragOver(true);
 	}
@@ -53,6 +55,7 @@ export function FloatingCallWidget() {
 	function handleDrop(e: DragEvent<HTMLDivElement>) {
 		e.preventDefault();
 		setIsDragOver(false);
+		if (!widgetAttachOpen) return;
 		const file = e.dataTransfer.files?.[0];
 		if (!file) return;
 		void call.attachFile(

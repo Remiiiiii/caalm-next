@@ -122,6 +122,26 @@ export async function listTagsForOrg(
 	);
 }
 
+/** Contracts/licenses already tagged as evidence for this requirement, org-wide — not scoped to any particular Audit Lab session, since a tag is a standing org fact, not something born in one interview. */
+export async function listTagsForRequirement(
+	orgId: string,
+	requirementId: string,
+): Promise<EvidenceRecordTag[]> {
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId!,
+		tableId: tableId(),
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("requirementId", requirementId),
+			Query.limit(100),
+		],
+	});
+	return result.rows.map((row) =>
+		parseTag(row as unknown as Record<string, unknown>),
+	);
+}
+
 export function groupRequirementIdsByRecord(
 	tags: EvidenceRecordTag[],
 ): Map<string, string[]> {

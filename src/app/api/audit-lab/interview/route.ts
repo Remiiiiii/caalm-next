@@ -85,7 +85,12 @@ export async function POST(request: NextRequest) {
 			}
 			return NextResponse.json({ data: result });
 		}
-		const result = await generateQuestionBank(resolved.actor, sessionId);
+		const bankSource = body.source === "matrix" ? "matrix" : "template";
+		const result = await generateQuestionBank(
+			resolved.actor,
+			sessionId,
+			bankSource,
+		);
 		if (result.error) {
 			return NextResponse.json({ error: result.error }, { status: 400 });
 		}

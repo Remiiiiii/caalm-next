@@ -7,6 +7,7 @@ import {
 	markAttachmentFailed,
 	markAttachmentScanning,
 } from "@/lib/audit-lab/service";
+import { hashAuditContent } from "@/lib/audit-upload/content-hash";
 import { scanAttachmentFile } from "./scan";
 
 /**
@@ -37,7 +38,7 @@ export async function runAttachmentUpload(
 			);
 			return { status: "failed" };
 		}
-		await markAttachmentAttached(rowId);
+		await markAttachmentAttached(rowId, hashAuditContent(bytes));
 		return { status: "attached" };
 	} catch (uploadError) {
 		console.error(
