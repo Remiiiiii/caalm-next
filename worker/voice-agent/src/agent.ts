@@ -7,6 +7,7 @@ import * as silero from "@livekit/agents-plugin-silero";
 import * as synthesia from "@livekit/agents-plugin-synthesia";
 import { RoomEvent } from "@livekit/rtc-node";
 import { config as loadEnv } from "dotenv";
+import * as cpr from "./cpr/index.js";
 import {
 	buildCoverageSnapshot,
 	type CoverageSnapshot,
@@ -144,48 +145,67 @@ export default defineAgent({
 			clearTimeout(hardCap);
 		});
 
-		const synthesiaKey = process.env.SYNTHESIA_API_KEY?.trim();
-		const rawAvatarId = process.env.SYNTHESIA_AVATAR_ID?.trim();
-		// Studio "Copy ID" is the source gallery id. Sessions need the Interactive id
-		// (Prepare / Copy Interactive ID). The plugin also accepts bare UUIDs and adds av_.
-		const synthesiaAvatarId = rawAvatarId
-			? rawAvatarId.startsWith("av_")
-				? rawAvatarId
-				: `av_${rawAvatarId}`
-			: "";
-		const synthesiaDryRun = process.env.SYNTHESIA_DRY_RUN === "true";
+		const { backend: avatarBackend, reason: avatarReason } =
+			cpr.selectAvatarBackend();
 		let avatarStarted = false;
-		if (synthesiaDryRun) {
-			console.log(
-				"[voice-agent] SYNTHESIA_DRY_RUN=true; skipping Synthesia avatar call, audio-only",
-			);
-		} else if (synthesiaKey && synthesiaAvatarId) {
+		if (avatarBackend === "none") {
+			console.log(`[voice-agent] ${avatarReason}`);
+		} else if (avatarBackend === "cpr") {
 			try {
-				const avatar = new synthesia.AvatarSession(
-					new synthesia.AvatarConfig({
-						avatarIds: [synthesiaAvatarId],
-					}),
-					{
-						apiKey: synthesiaKey,
-						avatarParticipantName: "audit-lab-interviewer-avatar",
-					},
-				);
+				const avatar = new cpr.AvatarSession({
+					avatarParticipantName: "audit-lab-interviewer-avatar",
+				});
 				await avatar.start(session, ctx.room);
 				avatarStarted = true;
+				console.log("[voice-agent] CPR avatar started", avatarReason);
 			} catch (err) {
 				const typed =
-					err instanceof synthesia.SynthesiaError
-						? { type: err.type, status: err.status, message: err.message }
+					err instanceof cpr.CprAvatarError
+						? { type: err.type, message: err.message }
 						: err;
 				console.error(
-					"[voice-agent] Synthesia avatar failed; continuing audio-only",
+					"[voice-agent] CPR avatar failed; continuing audio-only",
 					typed,
 				);
 			}
-		} else if (process.env.NODE_ENV === "production") {
-			console.error(
-				"[voice-agent] SYNTHESIA_API_KEY / SYNTHESIA_AVATAR_ID unset; audio-only interviewer",
-			);
+		} else {
+			const synthesiaKey = process.env.SYNTHESIA_API_KEY?.trim();
+			const rawAvatarId = process.env.SYNTHESIA_AVATAR_ID?.trim();
+			// Studio "Copy ID" is the source gallery id. Sessions need the Interactive id
+			// (Prepare / Copy Interactive ID). The plugin also accepts bare UUIDs and adds av_.
+			const synthesiaAvatarId = rawAvatarId
+				? rawAvatarId.startsWith("av_")
+					? rawAvatarId
+					: `av_${rawAvatarId}`
+				: "";
+			if (synthesiaKey && synthesiaAvatarId) {
+				try {
+					const avatar = new synthesia.AvatarSession(
+						new synthesia.AvatarConfig({
+							avatarIds: [synthesiaAvatarId],
+						}),
+						{
+							apiKey: synthesiaKey,
+							avatarParticipantName: "audit-lab-interviewer-avatar",
+						},
+					);
+					await avatar.start(session, ctx.room);
+					avatarStarted = true;
+				} catch (err) {
+					const typed =
+						err instanceof synthesia.SynthesiaError
+							? { type: err.type, status: err.status, message: err.message }
+							: err;
+					console.error(
+						"[voice-agent] Synthesia avatar failed; continuing audio-only",
+						typed,
+					);
+				}
+			} else if (process.env.NODE_ENV === "production") {
+				console.error(
+					"[voice-agent] SYNTHESIA_API_KEY / SYNTHESIA_AVATAR_ID unset; audio-only interviewer",
+				);
+			}
 		}
 
 		await session.start({

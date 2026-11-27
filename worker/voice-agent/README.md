@@ -126,9 +126,27 @@ Set `ELEVENLABS_AUDIT_LAB_VOICE_ID` for the interviewer voice (falls back to
 
 ## Phase 3 capabilities
 
-- Browser camera + optional Synthesia talking-head (`SYNTHESIA_API_KEY` / `SYNTHESIA_AVATAR_ID`).
+- Browser camera + optional talking-head:
+  - **CPR** (preferred when `CPR_AVATAR_ENABLED=true`): first-party LiveKit-adjacent avatar spike under `src/cpr/`. See `docs/internal/caalm-persona-runtime-prd.md`.
+  - **Synthesia** (legacy): `SYNTHESIA_API_KEY` / `SYNTHESIA_AVATAR_ID` when CPR is off.
 - Client-side voice anonymization before mic publish; live captions PII-scrubbed.
 - RoomComposite egress copied into Appwrite practice recordings bucket.
 - Transcript redaction + `audit_lab.view_practice_pii` / `manage_practice_media`.
 - `AUDIT_LAB_DATA_RESIDENCY_REGION` stamped on attempts (required in production).
 - LiveKit Cloud region and Appwrite region must match that stamp (no multi-cloud failover).
+
+## CPR avatar spike (slice 1)
+
+Goal: prove TTS audio → LiveKit avatar participant video without Synthesia, on the same LiveKit project the voice agent already uses.
+
+1. Set `CPR_AVATAR_ENABLED=true` and leave `CPR_AVATAR_DRY_RUN` unset/false.
+2. Leave `CPR_AVATAR_DISPATCH_URL` empty so the agent starts an **in-process** `LocalAvatarRunner` (mint token → second room join → publish spike video + re-publish audio).
+3. Start a practice voice interview (Amara/David LiveKit path). Confirm a remote participant `cpr-avatar-worker` publishes video.
+4. Soft-fail: unset CPR or set `CPR_AVATAR_DRY_RUN=true` → audio-only; interview still runs.
+
+The spike renderer draws a procedural portrait with audio-energy mouth motion. It is **not** the photoreal product bar; slice 2 swaps in the GPU VideoGenerator behind the same `AvatarSession` / dispatch contract.
+
+```bash
+pnpm --filter @caalm/voice-agent test
+pnpm --filter @caalm/voice-agent typecheck
+```
