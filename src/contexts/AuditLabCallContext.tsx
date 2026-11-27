@@ -46,15 +46,33 @@ import {
 	uploadInterviewAttachment,
 } from "@/lib/audit-lab/voice/attachments-client";
 import {
+	type InterviewAdvanceState,
+	buildInterviewCoverage,
+	createEmptyInterviewState,
+	decideRecordAndAdvance,
+	decideSkipQuestion,
+	markEvidenceAttached,
+	unlockAttachAfterAuditorFinishedAsking,
+} from "@/lib/audit-lab/voice/advance-interview";
+import {
+	type AnswerQuality,
 	buildCoverageSnapshot,
 	type CoverageSnapshot,
+	isAttachControlVisible,
+	MIN_AUDITOR_QUESTION_SPEAK_MS,
 	VOICE_COVERAGE_TOPIC,
+	VOICE_EVIDENCE_ATTACHED_TOPIC,
 } from "@/lib/audit-lab/voice/coverage";
 import {
 	NUANCE_FLAG_CLARIFICATION_TOOL,
 	NUANCE_RECORD_RESPONSE_TOOL,
+	NUANCE_SKIP_QUESTION_TOOL,
 } from "@/lib/audit-lab/voice/nuance";
 import { redactPii } from "@/lib/audit-lab/voice/pii";
+import {
+	buildEvidenceAttachedThinkingNote,
+	buildInterviewWrapUpThinkingNote,
+} from "@/lib/audit-lab/voice/thinking-notes";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 export type CallPhase = "idle" | "consent" | "connecting" | "live" | "ended";
@@ -87,10 +105,25 @@ function parseCoveragePayload(payload: Uint8Array): CoverageSnapshot | null {
 		if (!Array.isArray(data.items) || typeof data.total !== "number") {
 			return null;
 		}
+		// Older workers may omit attachOpen / hasDocument — default closed.
+		data.items = data.items.map((item) => ({
+			...item,
+			hasDocument: Boolean(item.hasDocument),
+			attachOpen: Boolean(item.attachOpen),
+			requiresEvidence: Boolean(item.requiresEvidence),
+		}));
 		return data;
 	} catch {
 		return null;
 	}
+}
+
+/** questionIds with a landed, scanned-clean attachment — feeds the RubricPanel "document ✓ / statement only" chip via `buildCoverageSnapshot`'s `documentedIds`. */
+function documentedQuestionIds(turns: TranscriptTurn[]): string[] {
+	return turns
+		.filter((t) => t.kind === "attachment" && t.attachmentStatus === "attached")
+		.map((t) => t.questionId)
+		.filter((id): id is string => Boolean(id));
 }
 
 function isAvatarParticipant(attributes: Record<string, string> | undefined) {
@@ -185,8 +218,22 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	const [isMinimized, setIsMinimized] = useState(false);
 
 	const rubricRef = useRef<
-		Array<{ questionId: string; prompt: string; difficulty: string }>
+		Array<{
+			questionId: string;
+			prompt: string;
+			difficulty: string;
+			requiresEvidence?: boolean;
+		}>
 	>([]);
+	/** Nuance-path advance gate state (LiveKit worker owns its own copy). */
+	const interviewStateRef = useRef<InterviewAdvanceState>(
+		createEmptyInterviewState(),
+	);
+	/** When the avatar started speaking the current question (Nuance unlock gate). */
+	const nuanceSpeakStartRef = useRef<{
+		questionId: string;
+		startedAt: number;
+	} | null>(null);
 	const roomRef = useRef<Room | null>(null);
 	const attemptIdRef = useRef<string | null>(null);
 	const audioContainerRef = useRef<HTMLDivElement | null>(null);
@@ -212,6 +259,13 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	const nuanceConversationRef = useRef<NuanceConversation | null>(null);
 	const nuanceUnsubsRef = useRef<Array<() => void>>([]);
 	const nuanceAudioElRef = useRef<HTMLAudioElement | null>(null);
+	const notifyEvidenceAttachedRef = useRef<
+		(meta: {
+			questionId: string;
+			fileName?: string;
+			replyToText?: string;
+		}) => Promise<void>
+	>(async () => undefined);
 
 	const registerLocalVideoEl = useCallback((el: HTMLVideoElement | null) => {
 		localVideoElRef.current = el;
@@ -274,21 +328,46 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 	const onTranscriptUpdate = useCallback(
 		(payload: TranscriptTurn & { attemptId?: string }) => {
 			if (!payload?.$id || payload.attemptId !== attemptIdRef.current) return;
+			let merged: TranscriptTurn[] = [];
 			setTranscriptTurns((prev) => {
 				const idx = prev.findIndex((t) => t.$id === payload.$id);
-				if (idx < 0) return [...prev, payload];
-				const next = [...prev];
-				next[idx] = payload;
-				return next;
+				merged = idx < 0 ? [...prev, payload] : prev.map((t, i) => (i === idx ? payload : t));
+				return merged;
 			});
 			if (payload.questionId && rubricRef.current.length > 0) {
+				const documented = documentedQuestionIds(merged);
+				if (
+					payload.kind === "attachment" &&
+					payload.attachmentStatus === "attached"
+				) {
+					markEvidenceAttached(
+						interviewStateRef.current,
+						payload.questionId,
+					);
+					void notifyEvidenceAttachedRef.current({
+						questionId: payload.questionId,
+						fileName: payload.fileName,
+						replyToText: payload.replyToText,
+					});
+				}
 				setCoverage((prev) => {
 					const coveredIds = new Set(prev?.coveredIds ?? []);
-					coveredIds.add(payload.questionId as string);
+					if (payload.kind !== "attachment") {
+						coveredIds.add(payload.questionId as string);
+					}
+					const state = interviewStateRef.current;
 					return buildCoverageSnapshot({
 						rubric: rubricRef.current,
-						coveredIds,
-						currentQuestionId: prev?.currentQuestionId ?? null,
+						coveredIds:
+							backendRef.current === "nuance"
+								? state.covered
+								: coveredIds,
+						currentQuestionId:
+							backendRef.current === "nuance"
+								? state.currentQuestionId
+								: (prev?.currentQuestionId ?? null),
+						documentedIds: documented,
+						attachOpenIds: state.attachOpen,
 					});
 				});
 			}
@@ -483,24 +562,33 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 						questionId: string;
 						prompt: string;
 						difficulty: string;
+						requiresEvidence?: boolean;
 					}>;
 				};
 			};
 			if (!res.ok || !json.data) return;
 			rubricRef.current = json.data.rubric;
+			const documented = documentedQuestionIds(json.data.transcriptTurns);
+			const coveredIds = (json.data.transcriptTurns ?? [])
+				.filter((t) => (t as TranscriptTurn).kind !== "attachment")
+				.map((t) => t.questionId)
+				.filter((id): id is string => Boolean(id));
+			interviewStateRef.current = {
+				...createEmptyInterviewState(
+					json.data.rubric,
+					json.data.currentQuestionId ?? null,
+				),
+				covered: new Set(coveredIds),
+				documented: new Set(documented),
+			};
+			nuanceSpeakStartRef.current = null;
 			setParticipants(json.data.participants);
 			setTranscriptTurns(json.data.transcriptTurns);
 			if (json.data.rubric.length > 0) {
 				setCoverage((prev) =>
 					prev
 						? prev
-						: buildCoverageSnapshot({
-								rubric: json.data?.rubric ?? [],
-								coveredIds: (json.data?.transcriptTurns ?? [])
-									.map((t) => t.questionId)
-									.filter((id): id is string => Boolean(id)),
-								currentQuestionId: json.data?.currentQuestionId ?? null,
-							}),
+						: buildInterviewCoverage(interviewStateRef.current),
 				);
 			}
 		} catch (err) {
@@ -677,6 +765,35 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 						if (localVideoElRef.current)
 							userVideoTrack.attach(localVideoElRef.current);
 					}
+				} else if (
+					event.type === "speaking-changed" &&
+					event.participant === "avatar"
+				) {
+					const state = interviewStateRef.current;
+					const qid = state.currentQuestionId;
+					if (event.isSpeaking) {
+						// Start (or refresh) the ask timer only for the active question.
+						if (qid && !state.covered.has(qid)) {
+							nuanceSpeakStartRef.current = {
+								questionId: qid,
+								startedAt: Date.now(),
+							};
+						}
+					} else {
+						const speak = nuanceSpeakStartRef.current;
+						nuanceSpeakStartRef.current = null;
+						const spokeLongEnough =
+							speak &&
+							speak.questionId === qid &&
+							Date.now() - speak.startedAt >= MIN_AUDITOR_QUESTION_SPEAK_MS;
+						// Ignore connect blips / short hellos — attach stays locked until a real ask.
+						if (
+							spokeLongEnough &&
+							unlockAttachAfterAuditorFinishedAsking(state)
+						) {
+							setCoverage(buildInterviewCoverage(state));
+						}
+					}
 				} else if (event.type === "session-ended") {
 					setPhase((p) => (p === "live" ? "ended" : p));
 					if (attemptIdRef.current) void postNuanceEnd(attemptIdRef.current);
@@ -722,41 +839,165 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 		void joinSession(attemptIdRef.current as string);
 	}
 
-	async function handleNuanceToolCall(call: NuanceToolCall): Promise<string> {
+	async function persistNuanceTurn(params: {
+		questionId: string;
+		answerSummary: string;
+		citedEvidence?: string;
+		answerQuality: AnswerQuality;
+	}): Promise<{ error?: string }> {
 		const attemptId = attemptIdRef.current;
-		if (!attemptId) return "No active attempt.";
+		if (!attemptId) return { error: "No active attempt." };
+		const res = await fetch("/api/audit-lab/practice/voice/nuance-turn", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				attemptId,
+				questionId: params.questionId,
+				answerSummary: params.answerSummary,
+				citedEvidence: params.citedEvidence,
+				answerQuality: params.answerQuality,
+			}),
+		});
+		const json = (await res.json()) as { error?: string };
+		if (!res.ok) return { error: json.error || "Could not record that turn." };
+		return {};
+	}
+
+	async function handleNuanceToolCall(call: NuanceToolCall): Promise<string> {
+		if (!attemptIdRef.current) return "No active attempt.";
+		const state = interviewStateRef.current;
+
 		if (call.name === NUANCE_FLAG_CLARIFICATION_TOOL) {
 			const reason = String(call.arguments?.reason ?? "that answer");
+			const questionId = String(call.arguments?.questionId ?? "");
+			if (questionId) {
+				state.currentQuestionId = questionId;
+				setCoverage(buildInterviewCoverage(state));
+			}
 			return `Ask a single, specific follow-up addressing: ${reason}. Do not move to a new rubric item yet.`;
 		}
-		if (call.name === NUANCE_RECORD_RESPONSE_TOOL) {
-			const res = await fetch("/api/audit-lab/practice/voice/nuance-turn", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					attemptId,
-					questionId: call.arguments?.questionId,
-					answerSummary: call.arguments?.answerSummary,
-					citedEvidence: call.arguments?.citedEvidence,
-					answerQuality: call.arguments?.answerQuality,
-				}),
+
+		if (call.name === NUANCE_SKIP_QUESTION_TOOL) {
+			const questionId = String(call.arguments?.questionId ?? "");
+			const reason = String(
+				call.arguments?.reason ?? "interviewee asked to move on",
+			);
+			const decision = decideSkipQuestion(state, { questionId, reason });
+			if (decision.action === "blocked") return decision.message;
+			const persisted = await persistNuanceTurn({
+				questionId,
+				answerSummary: `Skipped by interviewee: ${reason}`,
+				answerQuality: decision.quality,
 			});
-			const json = (await res.json()) as {
-				error?: string;
-				data?: {
-					next: { questionId: string; prompt: string } | null;
-					remaining: number;
-				};
-			};
-			if (!res.ok || !json.data)
-				return json.error || "Could not record that turn.";
-			const { next, remaining } = json.data;
-			if (!next)
-				return "That was the last rubric item. Wrap up and end the call.";
-			return `Recorded. ${remaining} rubric item(s) left. Next, ask about: "${next.prompt}" (questionId: ${next.questionId}).`;
+			if (persisted.error) return persisted.error;
+			setCoverage(buildInterviewCoverage(state));
+			await nudgeNuanceWrapUpIfDone(state);
+			return decision.message;
 		}
+
+		if (call.name === NUANCE_RECORD_RESPONSE_TOOL) {
+			const questionId = String(call.arguments?.questionId ?? "");
+			const qualityRaw = String(call.arguments?.answerQuality ?? "adequate");
+			const answerQuality: AnswerQuality =
+				qualityRaw === "strong" ||
+				qualityRaw === "adequate" ||
+				qualityRaw === "weak"
+					? qualityRaw
+					: "adequate";
+			const evidenceAcceptedRaw = call.arguments?.evidenceAccepted;
+			const evidenceAccepted =
+				typeof evidenceAcceptedRaw === "boolean"
+					? evidenceAcceptedRaw
+					: undefined;
+			const decision = decideRecordAndAdvance(state, {
+				questionId,
+				answerQuality,
+				evidenceAccepted,
+			});
+			if (decision.action === "blocked") {
+				// Wrong evidence reopens the paperclip — refresh coverage even when blocked.
+				setCoverage(buildInterviewCoverage(state));
+				return decision.message;
+			}
+			const persisted = await persistNuanceTurn({
+				questionId,
+				answerSummary: String(call.arguments?.answerSummary ?? ""),
+				citedEvidence:
+					typeof call.arguments?.citedEvidence === "string"
+						? call.arguments.citedEvidence
+						: undefined,
+				answerQuality: decision.quality,
+			});
+			if (persisted.error) return persisted.error;
+			setCoverage(buildInterviewCoverage(state));
+			await nudgeNuanceWrapUpIfDone(state);
+			return decision.message;
+		}
+
 		return `Unknown tool "${call.name}".`;
 	}
+
+	async function nudgeNuanceWrapUpIfDone(state: InterviewAdvanceState) {
+		if (state.currentQuestionId) return;
+		if (state.covered.size === 0) return;
+		const conversation = nuanceConversationRef.current;
+		if (!conversation) return;
+		try {
+			await conversation.append(
+				"thinking",
+				buildInterviewWrapUpThinkingNote({
+					wrapUpTool: "end_call",
+					coveredQuestionIds: [...state.covered],
+				}),
+			);
+		} catch (err) {
+			console.error("[AuditLabCallContext] nuance wrap-up notify", err);
+		}
+	}
+
+	notifyEvidenceAttachedRef.current = async (meta) => {
+		const rubricItem = interviewStateRef.current.rubric.find(
+			(r) => r.questionId === meta.questionId,
+		);
+		const prompt =
+			rubricItem?.prompt?.trim() || meta.replyToText?.trim() || "(unknown prompt)";
+		const fileName = meta.fileName?.trim() || "unknown file";
+		if (backendRef.current === "nuance") {
+			const conversation = nuanceConversationRef.current;
+			if (!conversation) return;
+			try {
+				await conversation.append(
+					"thinking",
+					buildEvidenceAttachedThinkingNote({
+						questionId: meta.questionId,
+						prompt,
+						fileName,
+						wrapUpTool: "end_call",
+					}),
+				);
+			} catch (err) {
+				console.error("[AuditLabCallContext] nuance evidence notify", err);
+			}
+			return;
+		}
+		const room = roomRef.current;
+		if (!room?.localParticipant) return;
+		try {
+			const payload = new TextEncoder().encode(
+				JSON.stringify({
+					questionId: meta.questionId,
+					fileName,
+					prompt,
+				}),
+			);
+			await room.localParticipant.publishData(payload, {
+				reliable: true,
+				topic: VOICE_EVIDENCE_ATTACHED_TOPIC,
+			});
+		} catch (err) {
+			console.error("[AuditLabCallContext] livekit evidence notify", err);
+		}
+	};
 
 	async function confirmConsentAndConnect(initialAudioAnonymized: boolean) {
 		if (!attemptIdRef.current) return;
@@ -840,7 +1081,17 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 			room.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
 				if (topic && topic !== VOICE_COVERAGE_TOPIC) return;
 				const next = parseCoveragePayload(payload);
-				if (next) setCoverage(next);
+				if (!next) return;
+				// Keep local gate sets aligned with the worker snapshot for attach checks.
+				interviewStateRef.current.currentQuestionId = next.currentQuestionId;
+				interviewStateRef.current.covered = new Set(next.coveredIds);
+				interviewStateRef.current.documented = new Set(
+					next.items.filter((i) => i.hasDocument).map((i) => i.questionId),
+				);
+				interviewStateRef.current.attachOpen = new Set(
+					next.items.filter((i) => i.attachOpen).map((i) => i.questionId),
+				);
+				setCoverage(next);
 			});
 			room.on(
 				RoomEvent.TrackSubscribed,
@@ -929,9 +1180,33 @@ export function AuditLabCallProvider({ children }: { children: ReactNode }) {
 		replyToText?: string,
 	) {
 		if (!attemptIdRef.current) return;
+		const state = interviewStateRef.current;
+		const targetId = questionId ?? state.currentQuestionId ?? undefined;
+		const rubricItem = state.rubric.find((r) => r.questionId === targetId);
+		const requiresEvidence = Boolean(rubricItem?.requiresEvidence);
+		const hasDocument = Boolean(
+			targetId && state.documented.has(targetId),
+		);
+		const attachOpen = Boolean(targetId && state.attachOpen.has(targetId));
+		if (!targetId || !requiresEvidence) {
+			toast({
+				title: "Attachment",
+				description: "This question does not need an evidence file.",
+			});
+			return;
+		}
+		// Locked until the auditor finishes asking; paperclip stays for replace until advance.
+		if (!isAttachControlVisible({ attachOpen, hasDocument })) {
+			toast({
+				title: "Attachment",
+				description:
+					"Wait until the auditor finishes asking this question before attaching evidence.",
+			});
+			return;
+		}
 		const result = await uploadInterviewAttachment(attemptIdRef.current, file, {
 			source,
-			questionId,
+			questionId: targetId,
 			replyToText,
 		});
 		if ("error" in result) {

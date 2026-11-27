@@ -4,6 +4,7 @@ import {
 	placeQuestionInSection,
 	sectionMinutes,
 	serializeScriptItems,
+	suggestScriptSectionForQuestion,
 } from "./script-sections";
 
 describe("script-sections", () => {
@@ -24,5 +25,14 @@ describe("script-sections", () => {
 		const again = parseScriptItems(serializeScriptItems(canvas));
 		expect(again.opening[0]?.prompt).toBe("Intro?");
 		expect(sectionMinutes(again.opening)).toBe(5);
+	});
+
+	it("puts evidence walkthroughs in evidence, not opening/closing", () => {
+		const written =
+			"Walk me through how you meet this requirement: Written contracts. What evidence do you have, and where is it on file?";
+		const provider =
+			"Walk me through how you meet this requirement: Active provider contract. What evidence do you have, and where is it on file?";
+		expect(suggestScriptSectionForQuestion(written, 0, 2)).toBe("evidence");
+		expect(suggestScriptSectionForQuestion(provider, 1, 2)).toBe("evidence");
 	});
 });

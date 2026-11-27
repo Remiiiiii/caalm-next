@@ -115,12 +115,14 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import type { LabCapabilities } from "@/lib/audit-lab/access";
+import type { EvidenceLinkSummary } from "@/lib/audit-lab/evidence-link-summary";
 import type {
 	OverviewActivity,
 	OverviewSuggestion,
 } from "@/lib/audit-lab/overview";
 import {
 	type EvidenceRequest,
+	type EvidenceTestResult,
 	parseParticipants,
 	type ReviewQuestion,
 	type ReviewSession,
@@ -141,6 +143,26 @@ function formatSessionDateTime(iso: string | null | undefined): string {
 		minute: "2-digit",
 		hour12: true,
 	});
+}
+
+function evidenceTestResultLabel(
+	value: EvidenceTestResult | undefined,
+): string {
+	switch (value) {
+		case "no_exception":
+			return "No exception";
+		case "exception":
+			return "Exception";
+		case "deficiency":
+			return "Deficiency";
+		case "not_tested":
+		case undefined:
+			return "Not tested";
+		default: {
+			const _exhaustive: never = value;
+			return _exhaustive;
+		}
+	}
 }
 
 type OverviewPayload = {
@@ -831,11 +853,25 @@ export function AuditLabClient({
 		});
 	};
 
+	const { data: evidenceMatrixData } = useSWR<{
+		data?: { linkSummaries?: Record<string, EvidenceLinkSummary> };
+	}>(
+		surface === "evidence" && selected
+			? `/api/audit-lab/evidence?sessionId=${selected.$id}`
+			: null,
+		fetcher,
+	);
+	const linkSummaries = evidenceMatrixData?.data?.linkSummaries ?? {};
+
 	const filteredEvidence = useMemo(() => {
-		return evidence.filter((item) =>
-			statusFilter === "all" ? true : item.status === statusFilter,
-		);
-	}, [evidence, statusFilter]);
+		return evidence.filter((item) => {
+			if (selected && item.sessionId !== selected.$id) return false;
+			if (statusFilter !== "all" && item.status !== statusFilter) {
+				return false;
+			}
+			return true;
+		});
+	}, [evidence, statusFilter, selected]);
 
 	const trendSeries = useMemo(() => {
 		return coverageByDept.map((row) => ({
@@ -2355,6 +2391,49 @@ export function AuditLabClient({
 											type="button"
 											className="btn-primary"
 											disabled={busyAction !== null}
+											title="One question per Evidence Readiness Matrix requirement, so every requirement gets asked about."
+											onClick={async () => {
+												setBusyAction("generate_from_matrix");
+												try {
+													const json = await postJson(
+														"/api/audit-lab/interview",
+														{
+															action: "generate_bank",
+															sessionId: selected.$id,
+															source: "matrix",
+														},
+													);
+													await mutateBank();
+													const count = ((
+														json.data as { questions?: unknown[] } | undefined
+													)?.questions?.length ?? 0) as number;
+													toast({
+														title: "Evidence Matrix questions",
+														description:
+															count > 0
+																? `Added ${count} question${count === 1 ? "" : "s"} from the Evidence Readiness Matrix.`
+																: "No new matrix requirements to add.",
+													});
+												} catch (err) {
+													onError(err, "I couldn't generate questions from the matrix.");
+												} finally {
+													setBusyAction(null);
+												}
+											}}
+										>
+											{busyAction === "generate_from_matrix" ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												<ListChecks className="h-4 w-4" />
+											)}
+											{busyAction === "generate_from_matrix"
+												? "Generating…"
+												: "Generate from Evidence Matrix"}
+										</Button>
+										<Button
+											type="button"
+											className="btn-primary"
+											disabled={busyAction !== null}
 											onClick={async () => {
 												setBusyAction("import_findings");
 												try {
@@ -2535,22 +2614,41 @@ export function AuditLabClient({
 							{filteredEvidence.length === 0 ? (
 								<CaalmDataTableEmpty
 									title="No evidence requests"
-									description="Generate a list from the simulation scope."
+									description={
+										selected
+											? "Generate a list from the simulation scope."
+											: "Select a simulation to view its evidence matrix."
+									}
 								/>
 							) : (
 								<CaalmDataTable className="pt-2">
 									<TableHeader>
-										<TableRow className="hover:bg-transparent">
-											<TableHead>Ref / title</TableHead>
-											<TableHead>
+										<TableRow className={DATA_TABLE_HEADER_ROW}>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Ref / title
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 												{evidenceGroup === "department"
 													? "Department"
 													: evidenceGroup === "owner"
 														? "Owner"
 														: "Assignee"}
 											</TableHead>
-											<TableHead>Due</TableHead>
-											<TableHead>Status</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Statement
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Document
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Due
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Status
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Test result
+											</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
@@ -2561,16 +2659,25 @@ export function AuditLabClient({
 													: evidenceGroup === "owner"
 														? item.ownerUserId
 														: item.assigneeUserId;
+											const summary = item.controlRef
+												? linkSummaries[item.controlRef]
+												: undefined;
+											const testLabel = evidenceTestResultLabel(
+												item.testResult,
+											);
 											return (
-												<TableRow key={item.$id}>
-													<TableCell>
+												<TableRow
+													key={item.$id}
+													className={DATA_TABLE_BODY_ROW_CLICKABLE}
+												>
+													<TableCell className="px-3 py-3 align-middle">
 														<Link
 															href={`/audit-lab/evidence/${item.$id}`}
-															className="font-medium text-[#0f5384]"
+															className="font-semibold text-[#0f5384]"
 														>
 															{item.title}
 														</Link>
-														<p className="text-xs text-slate-500">
+														<p className="caption text-slate-500">
 															{item.controlRef ?? "—"}
 															{item.ownerUserId &&
 															item.assigneeUserId &&
@@ -2578,15 +2685,31 @@ export function AuditLabClient({
 																? " · single-person"
 																: ""}
 														</p>
+														{summary?.statementOnly ? (
+															<span className="mt-1 inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs text-orange">
+																Statement only
+															</span>
+														) : null}
 													</TableCell>
-													<TableCell className="text-sm text-slate-600">
+													<TableCell className="px-3 py-3 align-middle text-sm text-slate-600">
 														{groupValue ?? "—"}
 													</TableCell>
-													<TableCell className="text-sm text-slate-600">
+													<TableCell className="px-3 py-3 align-middle text-sm text-slate-600">
+														{summary?.hasTestimonial ? "Yes" : "—"}
+													</TableCell>
+													<TableCell className="px-3 py-3 align-middle text-sm text-slate-600">
+														{summary?.hasDocumentary ? "Yes" : "—"}
+													</TableCell>
+													<TableCell className="px-3 py-3 align-middle text-sm text-slate-600">
 														{item.dueAt ?? "—"}
 													</TableCell>
-													<TableCell className="text-sm">
-														{item.status}
+													<TableCell className="px-3 py-3 align-middle text-sm">
+														<span className="inline-block whitespace-nowrap rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+															{item.status.replaceAll("_", " ")}
+														</span>
+													</TableCell>
+													<TableCell className="px-3 py-3 align-middle text-sm text-slate-600">
+														{testLabel}
 													</TableCell>
 												</TableRow>
 											);

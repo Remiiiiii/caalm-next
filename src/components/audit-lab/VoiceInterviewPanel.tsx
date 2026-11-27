@@ -153,8 +153,11 @@ export function VoiceInterviewPanel({
 		URL.revokeObjectURL(url);
 	}
 
+	const stageAttachOpen = Boolean(activeRubricItem?.attachOpen);
+
 	function handleStageDragOver(e: DragEvent<HTMLDivElement>) {
 		if (!e.dataTransfer.types.includes("Files")) return;
+		if (!stageAttachOpen) return;
 		e.preventDefault();
 		setIsStageDragOver(true);
 	}
@@ -167,6 +170,7 @@ export function VoiceInterviewPanel({
 	function handleStageDrop(e: DragEvent<HTMLDivElement>) {
 		e.preventDefault();
 		setIsStageDragOver(false);
+		if (!stageAttachOpen) return;
 		const file = e.dataTransfer.files?.[0];
 		if (!file) return;
 		void call.attachFile(
@@ -371,9 +375,11 @@ export function VoiceInterviewPanel({
 											) : null}
 										</div>
 
-										<div className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[0.85fr_1.15fr]">
+										{/* Left column hugs the square stage; right column takes the rest so transcript/rubric stay tight to the avatar. */}
+										<div className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[minmax(0,35.2rem)_minmax(0,1fr)]">
 											<div className="flex min-h-0 flex-col gap-3">
-												<div className="voice-call-stage aspect-[16/10]">
+												{/* Synthesia Interactive Avatar is 512×512; +10% of 32rem → 35.2rem, left-aligned. */}
+												<div className="voice-call-stage aspect-square w-full max-w-[min(100%,35.2rem)] overflow-hidden">
 													{/* eslint-disable-next-line jsx-a11y/media-has-caption */}
 													<video
 														ref={call.registerRemoteVideoEl}

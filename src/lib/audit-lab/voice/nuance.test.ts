@@ -41,6 +41,25 @@ describe("Nuance backend persona scoping", () => {
 });
 
 describe("buildNuanceSystemPrompt", () => {
+	it("tells the persona to honor evidence and wrap-up thinking notes", () => {
+		const prompt = buildNuanceSystemPrompt({
+			persona: "friendly_collegiate",
+			sessionTitle: "Review",
+			rubric: [
+				{
+					questionId: "q1",
+					prompt: "Show evidence",
+					source: "gap",
+					difficulty: "medium",
+					requiresEvidence: true,
+				},
+			],
+		});
+		expect(prompt).toMatch(/thinking note/i);
+		expect(prompt).toMatch(/end_call/);
+		expect(prompt).toMatch(/questionId/);
+	});
+
 	it("names the persona and includes every rubric question", () => {
 		const prompt = buildNuanceSystemPrompt({
 			persona: "friendly_collegiate",
@@ -77,6 +96,17 @@ describe("buildNuanceSystemPrompt", () => {
 		});
 		expect(prompt).toMatch(/never claim to be human/i);
 		expect(prompt).toMatch(/never name the ai model/i);
+	});
+
+	it("mentions skip_current_question and evidence review rules", () => {
+		const prompt = buildNuanceSystemPrompt({
+			persona: "friendly_collegiate",
+			sessionTitle: "Review",
+			rubric,
+		});
+		expect(prompt).toMatch(/skip_current_question/);
+		expect(prompt).toMatch(/needs evidence file/);
+		expect(prompt).toMatch(/evidenceAccepted/);
 	});
 
 	it("truncates an oversized rubric instead of exceeding Nuance's prompt-length cap", () => {

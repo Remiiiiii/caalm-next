@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { resolveAuditLabActor } from "@/lib/audit-lab/actor";
 import {
 	assignEvidenceOwner,
+	confirmEvidenceLink,
 	evidenceCoverageReport,
 	generateEvidenceRequestList,
 	updateEvidenceStatus,
@@ -80,8 +81,19 @@ export async function POST(request: NextRequest) {
 			managerUserId?: string;
 			status?: EvidenceStatus;
 			note?: string;
+			linkId?: string;
 		};
 		const action = String(body.action ?? "generate");
+		if (action === "confirm_link") {
+			const result = await confirmEvidenceLink(
+				resolved.actor,
+				String(body.linkId ?? ""),
+			);
+			if ("error" in result) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
 		if (action === "assign") {
 			const result = await assignEvidenceOwner(
 				resolved.actor,
