@@ -2,6 +2,7 @@ import { ID, Query } from "node-appwrite";
 import { getCalendarEventById } from "@/lib/actions/calendar.actions";
 import { getUserByAccountId, getUserById } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
+import { brandButton, renderBrandedEmail } from "@/lib/email/brand-layout";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { zonedWallTimeToUtc } from "@/lib/timezone";
 import { getOrganizationTimezone } from "@/lib/timezone/org";
@@ -608,20 +609,12 @@ export const sendCalendarSharedNotification = async (
 
 				const emailText = `Hello,\n\n${ownerName} shared the calendar "${calendarName}" with you.\n\nYou can now view and manage events in this shared calendar.\n\nView Calendar: ${calendarUrl}\n\nBest regards,\nCAALM Solutions Team`;
 
-				const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #333; margin-top: 0;">I'd like to share my calendar with you</h3>
-          <p style="color: #666; font-size: 16px;">${ownerName} <span style="color: #888;">(${ownerEmail})</span> shared the <strong>"${calendarName}"</strong> calendar with you in CAALM.</p>
+				const emailHtml = renderBrandedEmail(
+					"I'd like to share my calendar with you",
+					`<p style="color: #666; font-size: 16px;">${ownerName} <span style="color: #888;">(${ownerEmail})</span> shared the <strong>"${calendarName}"</strong> calendar with you in CAALM.</p>
           <p style="color: #666; font-size: 16px;">You can now view events and their details in this calendar.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${calendarUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Calendar</a>
-          </div>
-        </div>
-        <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
-      </div>
-    `;
+          ${brandButton(calendarUrl, "View Calendar")}`,
+				);
 
 				await mailgunService.sendEmail({
 					to: recipientEmail,
@@ -828,25 +821,17 @@ export const sendMeetingInviteNotification = async (
 					.filter((line) => line !== null)
 					.join("\n");
 
-				const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #333; margin-top: 0;">You're invited to a meeting</h3>
-          <p style="color: #666; font-size: 16px;"><strong>${details.organizerName}</strong> invited you to <strong>“${details.title}”</strong>.</p>
+				const emailHtml = renderBrandedEmail(
+					"You're invited to a meeting",
+					`<p style="color: #666; font-size: 16px;"><strong>${details.organizerName}</strong> invited you to <strong>“${details.title}”</strong>.</p>
           <ul style="color: #666; font-size: 15px; line-height: 1.6;">
             <li><strong>Date:</strong> ${details.date}</li>
             <li><strong>Time:</strong> ${timeRange}</li>
             ${agenda ? `<li><strong>Agenda:</strong> ${agenda}</li>` : ""}
             ${location ? `<li><strong>Location:</strong> ${location}</li>` : ""}
           </ul>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${calendarUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Calendar</a>
-          </div>
-        </div>
-        <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
-      </div>
-    `;
+          ${brandButton(calendarUrl, "View Calendar")}`,
+				);
 
 				await mailgunService.sendEmail({
 					to: recipientEmail,
