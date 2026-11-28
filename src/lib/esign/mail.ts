@@ -1,3 +1,4 @@
+import { brandButton, renderBrandedEmail } from "@/lib/email/brand-layout";
 import { mailgunService } from "@/lib/services/mailgun";
 import {
 	applyEsignEmailTemplate,
@@ -31,7 +32,12 @@ export async function sendSigningInvitation(
 		to: recipient.email,
 		subject,
 		text: `${body}\n\nReview and sign:\n${link}\n\nIf you were not expecting this, you can ignore the email.`,
-		html: `<p>${body.replaceAll("\n", "<br/>")}</p><p><a href="${link}">Review and sign</a></p><p>If you were not expecting this, you can ignore the email.</p>`,
+		html: renderBrandedEmail(
+			"",
+			`<p style="color: #666; font-size: 16px;">${body.replaceAll("\n", "<br/>")}</p>
+      ${brandButton(link, "Review and sign")}
+      <p style="color: #999; font-size: 13px;">If you were not expecting this, you can ignore the email.</p>`,
+		),
 	});
 }
 
@@ -45,6 +51,9 @@ export async function sendEnvelopeCompletedNotice(
 		to,
 		subject: `Signed: ${title}`,
 		text: `"${title}" has been fully signed and is now active.`,
-		html: `<p><strong>${title}</strong> has been fully signed and is now active.</p>`,
+		html: renderBrandedEmail(
+			"",
+			`<p style="color: #666; font-size: 16px;"><strong>${title}</strong> has been fully signed and is now active.</p>`,
+		),
 	});
 }

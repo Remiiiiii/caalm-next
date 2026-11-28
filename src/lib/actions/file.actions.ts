@@ -8,6 +8,7 @@ import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
+import { brandButton, renderBrandedEmail } from "@/lib/email/brand-layout";
 import { extractExpiryDateFromFile } from "@/lib/files/extract-expiry";
 import {
 	getFileShareNotificationTitle,
@@ -1984,20 +1985,12 @@ export const updateFileUsers = async ({
 							const emailSubject = `[CAALM] Document Shared: ${fileName}`;
 							const emailText = `Hello ${recipientName},\n\n${sharerName} (${sharerEmail}) shared the document "${fileName}" with you.\n\nYou can now access this document in your CAALM account.\n\nView Document: ${fileUrl}\n\nBest regards,\nCAALM Solutions Team`;
 
-							const emailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h2 style="color: #078FAB; text-align: center;">CAALM Solutions</h2>
-                  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="color: #333; margin-top: 0;">Document Shared with You</h3>
-                    <p style="color: #666; font-size: 16px;">${sharerName} <span style="color: #888;">(${sharerEmail})</span> shared the document <strong>"${fileName}"</strong> with you in CAALM.</p>
-                    <p style="color: #666; font-size: 16px;">You can now view and access this document in your account.</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                      <a href="${fileUrl}" style="background-color: #078FAB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">View Document</a>
-                    </div>
-                  </div>
-                  <p style="color: #999; font-size: 12px; text-align: center;">Best regards,<br>CAALM Solutions Team</p>
-                </div>
-              `;
+							const emailHtml = renderBrandedEmail(
+								"Document Shared with You",
+								`<p style="color: #666; font-size: 16px;">${sharerName} <span style="color: #888;">(${sharerEmail})</span> shared the document <strong>"${fileName}"</strong> with you in CAALM.</p>
+                <p style="color: #666; font-size: 16px;">You can now view and access this document in your account.</p>
+                ${brandButton(fileUrl, "View Document")}`,
+							);
 
 							await mailgunService.sendEmail({
 								to: email,
